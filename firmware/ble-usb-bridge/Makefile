@@ -5,8 +5,11 @@
 #
 # V1.4.0 supplies Drivers/ and Utilities/ (not present in V1.4.1)
 # V1.4.1 supplies updated Middlewares/ and Projects/
-CUBE_DRV_ROOT ?= /home/manuel/STM32Cube/Repository/STM32Cube_FW_WB0_V1.4.0
-CUBE_MW_ROOT  ?= /home/manuel/STM32Cube/Repository/STM32Cube_FW_WB0_V1.4.1
+# STM32Cube WB0 firmware packages, as installed by STM32CubeIDE/CubeMX.
+# Override STM32CUBE_REPO (or either root) for another install location.
+STM32CUBE_REPO ?= $(HOME)/STM32Cube/Repository
+CUBE_DRV_ROOT ?= $(STM32CUBE_REPO)/STM32Cube_FW_WB0_V1.4.0
+CUBE_MW_ROOT  ?= $(STM32CUBE_REPO)/STM32Cube_FW_WB0_V1.4.1
 CUBE_PROJECTS ?= $(CUBE_MW_ROOT)/Projects
 
 # Reference DataThroughput client — shared boilerplate

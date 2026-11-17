@@ -2,10 +2,10 @@
 # Compiles the REAL fpga_spi.c against stub HAL headers and a pin-level model
 # of the A.1.1g FPGA FSM — see test_fpga_spi.c for what that buys.
 #
-# MCU source path is per CLAUDE.md; override if the tree moves:
-#   make MCU=/path/to/kuntur-mcu
+# MCU source: the headstage project, one level up. Override if needed:
+#   make MCU=/path/to/firmware/headstage
 
-MCU ?= /data/projects/kuntur/kuntur144/mcu/kuntur-mcu
+MCU ?= ..
 
 CFLAGS = -std=c11 -O1 -g -Wall -Wextra -Wno-unused-parameter \
          -Istubs -I$(MCU)/Core/Inc

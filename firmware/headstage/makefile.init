@@ -1,0 +1,8 @@
+# Read first by the generated Debug/makefile (-include ../makefile.init);
+# STM32CubeIDE never regenerates this file.
+#
+# STM32Cube WB0 firmware package the headstage builds against. The generated
+# Debug/*.mk files refer to it as $(STM32CUBE_FW_WB0) instead of an absolute
+# path. Override for another install location:
+#   make all STM32CUBE_FW_WB0=/path/to/STM32Cube_FW_WB0_V1.4.0
+STM32CUBE_FW_WB0 ?= $(HOME)/STM32Cube/Repository/STM32Cube_FW_WB0_V1.4.0
