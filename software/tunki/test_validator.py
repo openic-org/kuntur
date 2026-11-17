@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-test_validator.py — headless Vega packet validator / regression harness.
+test_validator.py — headless Kuntur packet validator / regression harness.
 
 Reads StreamDataPacket_t frames from the WB09KE bridge serial port and reports:
   - effective packet rate and SPS
@@ -181,7 +181,7 @@ def run(port_name: str, duration: float, max_drops: int, grace: float, verbose: 
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Vega headless packet validator / regression harness",
+        description="Kuntur headless packet validator / regression harness",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

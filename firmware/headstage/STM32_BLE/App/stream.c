@@ -435,7 +435,7 @@ tBleStatus STREAM_NotifyChannelsReadback(uint8_t ch_a_friendly, uint8_t ch_b_fri
 /**
  * @brief  Notify STOP_STREAMING/START_STREAMING completion on 0xFFF3 — see
  *         docs/interfaces/channel-selection-control-plane.md section 5.6.
- *         Lets the pc-app wait for actual MCU confirmation instead of a
+ *         Lets Tunki wait for actual MCU confirmation instead of a
  *         fixed timer before proceeding to the next step of an Apply
  *         sequence.
  * @param  cmd              STREAM_RESPONSE_TYPE_STOP_STREAMING or
@@ -471,7 +471,7 @@ tBleStatus STREAM_NotifyStreamingAck(uint8_t cmd, uint8_t success, uint16_t Conn
  *         REG_WRITE16 and REG_READ16: an ack must mean "the regbank holds
  *         this", never "the write call returned". Same principle as
  *         FPGA_SPI_SetStreamEnable()'s existing write-then-read.
- *         `addr` is echoed so the pc-app can match a response to its request
+ *         `addr` is echoed so Tunki can match a response to its request
  *         without tracking an outstanding-command slot.
  * @param  type             STREAM_RESPONSE_TYPE_REG_WRITE16 or
  *                           STREAM_RESPONSE_TYPE_REG_READ16.

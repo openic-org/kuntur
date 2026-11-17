@@ -7,7 +7,7 @@ whether SKP (overflow) and underrun (rate-mismatch) rates actually moved,
 and by how much.
 
 Usage:
-    python3 pc-app/compare_recordings.py <before.csv> <after.csv>
+    python3 software/tunki/compare_recordings.py <before.csv> <after.csv>
 """
 
 import sys

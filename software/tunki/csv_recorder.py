@@ -1,5 +1,5 @@
 """
-CSV recorder — PC-app format extends the shared Android format
+CSV recorder — Tunki's format extends the format once shared with the retired Android app
 (timestamp_us,ch0,ch1) with a trailing seq_num column so BLE packet
 drops / UART framing resyncs can be correlated against sample-level
 gaps after the fact. seq_num is the packet's rolling header byte,

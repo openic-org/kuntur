@@ -58,7 +58,7 @@ install. Making these paths portable is planned.
 
 ```bash
 cd firmware/headstage/Debug && make all -j8     # → kuntur-mcu.elf / .hex
-cd firmware/ble-usb-bridge && make -j8          # → build/Vega_Bridge.bin
+cd firmware/ble-usb-bridge && make -j8          # → build/ble_usb_bridge.bin
 ```
 
 **FPGA** projects open in Lattice Radiant 2025.2 (`fpga/headstage/kuntur_fpga.rdf`,

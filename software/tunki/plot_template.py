@@ -1,5 +1,5 @@
 """
-Vega time-series analysis plot template.
+Tunki time-series analysis plot template.
 
 Produces a 3-row, 2-column dark-theme figure:
   Row 1 (full width) : full waveform
@@ -23,7 +23,7 @@ from plot_palette import PALETTE, fig_defaults, apply_dark_axes, dark_legend
 # ── CONFIGURE ────────────────────────────────────────────────────────────────
 
 CSV_FILE     = "vega_20260504_151311.csv"   # path to your CSV
-OUTPUT_FILE  = "/tmp/vega_plot.png"         # where to save the figure
+OUTPUT_FILE  = "/tmp/tunki_plot.png"         # where to save the figure
 DPI          = 150
 
 # Column names / indices in the CSV (0-based after header row)
@@ -39,7 +39,7 @@ GAP_THRESH   = 2.0             # multiples of expected Δt to call a gap
 ZOOM_START_S = 3.0
 ZOOM_WIDTH_S = 0.20
 
-TITLE = "Vega FPGA recording — analysis"
+TITLE = "Kuntur recording — analysis"
 
 # ── LOAD & PREPARE ───────────────────────────────────────────────────────────
 

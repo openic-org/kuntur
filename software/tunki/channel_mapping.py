@@ -1,13 +1,13 @@
 """
-RHD2164 friendly-channel offset compensation — pc-app side.
+RHD2164 friendly-channel offset compensation — Tunki side.
 
 Ground truth, verified directly against source, 2026-08-28:
 
 - `docs/interfaces/channel-selection-control-plane.md` §1a's friendly-index
   formula (`raw_code = ((n & 0x60) << 1) | (n & 0x1F)`) was written
   2026-08-05 and implemented verbatim as `FPGA_SPI_ChannelToRaw()` in
-  `/data/projects/kuntur/kuntur144/mcu/kuntur-mcu/Core/Src/fpga_spi.c:325-328`.
-- A.1.1e later confirmed on hardware (2026-08-11, `pc-app/diagnostics.py`'s
+  `firmware/headstage/Core/Src/fpga_spi.c:325-328`.
+- A.1.1e later confirmed on hardware (2026-08-11, `software/tunki/diagnostics.py`'s
   `SLOT_OFFSET = 3`) that the RHD2164's own 2-command response pipeline plus
   one more cycle of latch timing means the raw code that must be written to
   *observe* sampling slot `k`'s answer is `(k + 3) mod 33`, not `k` itself.

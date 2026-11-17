@@ -1,11 +1,11 @@
 /*
- * app_ble.c — BLE GAP/GATT central for the Vega WB09KE bridge.
+ * app_ble.c — BLE GAP/GATT central for the Kuntur BLE-USB bridge.
  *
  * Scans for the advertisement name "Kuntur-Headstage", connects, and hands off to
- * vega_bridge_app.c for GATT discovery and notification forwarding.
+ * bridge_app.c for GATT discovery and notification forwarding.
  *
  * On-connect LL parameter sequence (strictly sequential, event-triggered):
- *   connect (CI=7.5 ms, initial) → MTU exchange (in vega_bridge_app.c)
+ *   connect (CI=7.5 ms, initial) → MTU exchange (in bridge_app.c)
  *   MTU response → DLE(251) → HCI_LE_DATA_LENGTH_CHANGE symmetric
  *               → PHY 2M (CFG_TASK_PHY_UPDATE_ID)
  *
@@ -32,7 +32,7 @@
 #include "blenvm.h"
 #include "pka_manager.h"
 #include "stm32_seq.h"
-#include "vega_bridge_app.h"
+#include "bridge_app.h"
 
 /* ── Private types ─────────────────────────────────────────────────────────── */
 

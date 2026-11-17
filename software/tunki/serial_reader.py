@@ -14,7 +14,7 @@ import telemetry
 BAUD_RATE   = 2000000  # must match WB09KE bridge USART1; ST-LINK VCP is baud-sensitive
 READ_TIMEOUT = 1.0     # seconds
 
-# Command-frame framing (pc-app -> bridge), distinct from the 0xAA 0x55
+# Command-frame framing (Tunki -> bridge), distinct from the 0xAA 0x55
 # data-direction magic so a framing bug can't cross-interpret the two.
 # See docs/interfaces/channel-selection-control-plane.md section 3.
 CMD_MAGIC          = bytes([0xCC, 0x33])
@@ -28,7 +28,7 @@ CMD_START_STREAMING = 0x03
 CMD_REG_WRITE16    = 0x04
 CMD_REG_READ16     = 0x05
 
-# Command-response framing (bridge -> pc-app). See
+# Command-response framing (bridge -> Tunki). See
 # docs/interfaces/channel-selection-control-plane.md sections 4.4 and 5.6.
 # Payload's first byte is always a type/cmd tag matching the CMD_* values
 # above, so a response always echoes which command it's answering:
@@ -39,7 +39,7 @@ CMD_REG_READ16     = 0x05
 #   CMD_REG_READ16     (0x05): [0x05, addr, lo, hi] (4 bytes)
 RESPONSE_MAGIC = bytes([0xEE, 0x11])
 
-# Telemetry framing (bridge -> pc-app). See
+# Telemetry framing (bridge -> Tunki). See
 # docs/interfaces/stream-packet-format.md section 6 and telemetry.py.
 # ~1 Hz, out of band from the sample stream: cumulative loss counters from the
 # FPGA, the MCU and the bridge, plus the RTC time anchor.

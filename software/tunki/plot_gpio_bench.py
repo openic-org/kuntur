@@ -2,7 +2,7 @@
 plot_gpio_bench.py — plot BLE throughput vs GPIO toggle load from a bench CSV.
 
 Usage:
-    python3 pc-app/plot_gpio_bench.py [bench_YYYYMMDD_HHMMSS.csv]
+    python3 software/tunki/plot_gpio_bench.py [bench_YYYYMMDD_HHMMSS.csv]
 
 If no file is given, uses the most recent bench_*.csv in the current directory.
 
@@ -41,7 +41,7 @@ def main():
     files = sorted(glob.glob("bench_*.csv"))
     path  = sys.argv[1] if len(sys.argv) > 1 else (files[-1] if files else None)
     if not path:
-        print("No bench_*.csv found.  Run the pc-app while connected to generate one.")
+        print("No bench_*.csv found.  Run Tunki while connected to generate one.")
         return
 
     elapsed, kbps = load(path)

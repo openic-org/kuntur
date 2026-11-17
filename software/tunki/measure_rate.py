@@ -6,8 +6,8 @@ PLAN.md R1, task #6 bench check: after flashing a new bitstream, confirm
 that `clk` is what the build says (25,000 S/s for variants 2/3, 28,000 for
 variant 1) before anything else is built on it.
 
-What it measures, and why the pc-app's own timestamps cannot be used:
-inside a packet the pc-app spaces samples by its hard-coded
+What it measures, and why Tunki's own timestamps cannot be used:
+inside a packet Tunki spaces samples by its hard-coded
 packet_parser.SAMPLE_RATE_HZ, so per-sample timestamps only echo that
 constant. This uses the first row of each packet only (the MCU's RTC at
 packet assembly) and counts real samples, i.e. not the (0x8000, 0x8000)
@@ -29,7 +29,7 @@ well inside the ±0.05% (500 ppm) default tolerance. Record at least a
 minute.
 
 Usage:
-    python3 pc-app/measure_rate.py RECORDING.csv [--expect 25000] [--tol 0.05]
+    python3 software/tunki/measure_rate.py RECORDING.csv [--expect 25000] [--tol 0.05]
 
 Exit status 0 if within tolerance of --expect (or no --expect given),
 1 if not, 2 if the recording cannot be used.

@@ -5,10 +5,10 @@ Reports FIFO underrun rate, ch0 step continuity (DUP/SKP), the
 ch1-ch0 offset distribution (channel-swap detector), and — for
 recordings that carry the seq_num column — whether SKP events line
 up with dropped/resynced BLE packets. Saves a 4-panel plot to
-pc-app/analysis/.
+analysis/.
 
 Usage:
-    python3 pc-app/analyze_recording.py pc-app/recordings/vega_20260728_063543.csv
+    python3 software/tunki/analyze_recording.py recordings/vega_20260728_063543.csv
 
 compute_stats() is also used by compare_recordings.py to diff two
 recordings (e.g. before/after a FIFO depth change).

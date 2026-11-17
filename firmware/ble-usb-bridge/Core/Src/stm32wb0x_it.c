@@ -1,20 +1,20 @@
 /*
- * stm32wb0x_it.c — interrupt service routines for the Vega WB09KE bridge.
+ * stm32wb0x_it.c — interrupt service routines for the Kuntur BLE-USB bridge.
  *
  * Identical to the reference DataThroughput client except that USART1_IRQHandler
  * also drains the TX ring buffer on TXE interrupts.  The TXE interrupt is enabled
- * by VEGA_UART_Write() and disabled here when the buffer runs empty, so the ISR
+ * by BRIDGE_UART_Write() and disabled here when the buffer runs empty, so the ISR
  * never fires when there is nothing to send.
  */
 
-#include "app_conf.h"  /* must be first — see vega_bridge_app.c's identical comment; needed here for DT_INFO_MSG */
+#include "app_conf.h"  /* must be first — see bridge_app.c's identical comment; needed here for DT_INFO_MSG */
 #include "main.h"
 #include "stm32wb0x_it.h"
 #include "hw_pka.h"
 #include "ble_stack.h"
 #include "miscutil.h"
 #include "stm32wb0x_ll_usart.h"
-#include "vega_uart.h"
+#include "bridge_uart.h"
 
 extern PKA_HandleTypeDef hpka;
 
@@ -39,7 +39,7 @@ void USART1_IRQHandler(void)
     /* TX: drain ring buffer one byte per interrupt */
     if (LL_USART_IsEnabledIT_TXE(USART1) && LL_USART_IsActiveFlag_TXE(USART1)) {
         uint8_t byte;
-        if (VEGA_UART_TxBytePop(&byte)) {
+        if (BRIDGE_UART_TxBytePop(&byte)) {
             LL_USART_TransmitData8(USART1, byte);
         } else {
             LL_USART_DisableIT_TXE(USART1);
@@ -51,12 +51,12 @@ void USART1_IRQHandler(void)
      * consume falls through to the debug-trace callback as before. */
     if (LL_USART_IsActiveFlag_RXNE(USART1)) {
         uint8_t data = LL_USART_ReceiveData8(USART1);
-        if (!VEGA_UART_RxByte(data)) {
+        if (!BRIDGE_UART_RxByte(data)) {
             UartRxCpltCallback(&data, 1);
         }
     }
 
-    /* Overrun error (ORE): found 2026-08-06 diagnosing pc-app commands going
+    /* Overrun error (ORE): found 2026-08-06 diagnosing Tunki commands going
      * completely silent mid-session — every incoming byte after the overrun
      * is dropped because, per the USART reference manual, RXNE stops being
      * set for new data until ORE is explicitly cleared via ICR. Nothing here
@@ -69,13 +69,13 @@ void USART1_IRQHandler(void)
     if (LL_USART_IsActiveFlag_ORE(USART1)) {
         LL_USART_ClearFlag_ORE(USART1);
         /* An overrun means the byte that triggered it was lost — if that
-         * happened mid-command-frame, VEGA_UART_RxByte()'s parser is now
-         * misaligned with what the pc-app actually sent and has no way to
+         * happened mid-command-frame, BRIDGE_UART_RxByte()'s parser is now
+         * misaligned with what Tunki actually sent and has no way to
          * know it. Found 2026-08-31: this let a later frame's 0xCC 0x33
          * magic get consumed as payload data, corrupting a REG_WRITE16's
          * staged high byte on the FPGA regbank. Reset the parser so the
          * next magic pair starts a clean frame instead. */
-        VEGA_UART_RxReset();
+        BRIDGE_UART_RxReset();
         DT_INFO_MSG("USART1: RX overrun (ORE) cleared\r\n");
     }
 }

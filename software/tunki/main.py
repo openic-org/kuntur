@@ -5,7 +5,7 @@ from main_window import MainWindow
 
 def main():
     app = QApplication(sys.argv)
-    app.setApplicationName("Vega")
+    app.setApplicationName("Tunki")
     win = MainWindow()
     win.show()
     sys.exit(app.exec())

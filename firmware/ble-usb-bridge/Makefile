@@ -1,4 +1,4 @@
-# Vega WB09KE BLE-to-UART bridge
+# Kuntur BLE-USB bridge (NUCLEO-WB09KE)
 #
 # Bridge-specific sources live here; all boilerplate (HAL, BLE middleware,
 # system init, usart_if) is shared from the reference DataThroughput client.
@@ -13,7 +13,7 @@ CUBE_PROJECTS ?= $(CUBE_MW_ROOT)/Projects
 # Board-support base, vendored from openic-org/stm32ble-test@9e3679b client/ (see base/README.md)
 CLIENT := base
 
-TARGET    := Vega_Bridge
+TARGET    := ble_usb_bridge
 BUILD_DIR := build
 
 # make TRACE=1 → build-trace/: same firmware with CFG_DEBUG_APP_TRACE on, for
@@ -56,8 +56,8 @@ C_SOURCES := \
   Core/Src/main.c \
   Core/Src/stm32wb0x_it.c \
   STM32_BLE/App/app_ble.c \
-  STM32_BLE/App/vega_bridge_app.c \
-  STM32_BLE/App/vega_uart.c \
+  STM32_BLE/App/bridge_app.c \
+  STM32_BLE/App/bridge_uart.c \
 
 # Boilerplate shared from reference client
 C_SOURCES += \

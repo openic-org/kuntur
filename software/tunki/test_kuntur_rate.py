@@ -125,4 +125,17 @@ win2 = MainWindow()
 assert win2._rate.key == "28k" and win2._rate_combo.currentData() == "28k"
 print("pass  next start: 28k restored from the setting")
 
+# Pre-rename settings ("vega"/"pc-app") carry over once, never overwrite.
+from main_window import migrate_settings, LEGACY_SETTINGS_ORG, LEGACY_SETTINGS_APP
+new, old = QSettings(SETTINGS_ORG, SETTINGS_APP), QSettings(LEGACY_SETTINGS_ORG, LEGACY_SETTINGS_APP)
+new.remove(RATE_SETTING_KEY); old.setValue(RATE_SETTING_KEY, "25k")
+migrate_settings()
+assert QSettings(SETTINGS_ORG, SETTINGS_APP).value(RATE_SETTING_KEY) == "25k"
+assert MainWindow()._rate.key == "25k"
+print("pass  rename: rate carried over from the old vega/pc-app settings")
+new.setValue(RATE_SETTING_KEY, "28k")
+migrate_settings()
+assert QSettings(SETTINGS_ORG, SETTINGS_APP).value(RATE_SETTING_KEY) == "28k"
+print("pass  rename: an existing setting is never overwritten")
+
 print("ALL KUNTUR-RATE CHECKS PASSED")

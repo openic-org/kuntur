@@ -3,7 +3,7 @@ plot_bench.py — plot BLE throughput vs CPU burn loops from bench.log
 
 Usage:
     cat /dev/ttyACM0 | tee bench.log          # capture while firmware runs
-    python3 pc-app/plot_bench.py bench.log    # plot after (or pipe live)
+    python3 software/tunki/plot_bench.py bench.log    # plot after (or pipe live)
 """
 
 import sys

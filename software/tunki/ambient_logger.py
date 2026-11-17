@@ -4,13 +4,13 @@ ambient_logger.py — room temperature / humidity record for the chip0 trials.
 
 Listens for a Govee H5075 thermo-hygrometer's BLE advertisements and appends
 one row per --interval to bench/ambient_YYYYMMDD_HHMMSS.csv, on the same
-wall_time_utc timebase as the pc-app's bench/health_*.csv, so a dead/alive
+wall_time_utc timebase as Tunki's bench/health_*.csv, so a dead/alive
 edge can be joined to the room conditions it happened in. PLAN.md A.1.2:
 every temperature statement in the trial log so far is an inference from a
 thermostat one floor up; this is the first measurement where the board is.
 
 A separate process on purpose — it must keep logging while the headstage is
-powered off overnight, which is when the pc-app is closed.
+powered off overnight, which is when Tunki is closed.
 
 Decode (PLAN.md A.1.2, "Model confirmed: Govee H5075"): manufacturer data
 under company ID 0xEC88 is [0x00, b1, b2, b3, batt]; base = b1b2b3 big-endian,

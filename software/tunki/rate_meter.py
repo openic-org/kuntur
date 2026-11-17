@@ -4,7 +4,7 @@ live from the packets (PLAN.md R7, recording-format.md §3a.2), independent
 of the operator's setting.
 
 Method (revised 2026-11-10, Manuel): per packet, the MCU's RTC time at
-assembly (the header, not the pc-app's clamped timestamps), the real
+assembly (the header, not Tunki's clamped timestamps), the real
 samples (slots minus FIFO-empty 0x8000 padding) and seq_num. Packets are
 grouped into windows of WINDOW_S; a window's rate is its real samples over
 the time to the next window's first packet, with seq_num gaps filled by

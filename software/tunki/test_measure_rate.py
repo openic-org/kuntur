@@ -14,7 +14,7 @@ SENT = -32768
 
 
 def synth(rate, seconds=90.0, mu=29_466.0, drop_every=0, clamp=False, seed=1):
-    """Rows (t, ch0, ch1, seq) as the pc-app records them.
+    """Rows (t, ch0, ch1, seq) as Tunki records them.
 
     Packets leave at the transport's pace (59 slots each, mu slots/s, in
     bursts); each carries the real samples produced since the previous one,
@@ -60,7 +60,7 @@ assert r["lost_packets"] > 0
 assert abs(r["rate"] - 25_000.0) / 25_000.0 < 1e-3, r
 print(f"1 packet in 50 lost: {r['lost_packets']} found, measured {r['rate']:.1f}")
 
-# 3. the pc-app's monotonicity clamp on burst timestamps does not bias it
+# 3. Tunki's monotonicity clamp on burst timestamps does not bias it
 r = mr.measure(*mr.packets(*synth(28_000.0, clamp=True)))
 assert abs(r["rate"] - 28_000.0) / 28_000.0 < 5e-4, r
 print(f"clamped timestamps: measured {r['rate']:.1f}")

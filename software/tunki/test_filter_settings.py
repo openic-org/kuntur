@@ -27,7 +27,7 @@ FILTER_ROM = {4: 0x1F, 8: 0x50, 9: 0x51, 10: 0x52, 11: 0x53, 12: 0x0A, 13: 0x0B}
 class FakeReader(_BaseFakeReader):
     """Adds SET_CHANNELS: the real MCU translates a friendly 0-127 index to
     a raw ch_code and writes it into REG_CH_A/REG_CH_B; the exact
-    translation is opaque to the pc-app (the whole reason Get Settings
+    translation is opaque to Tunki (the whole reason Get Settings
     restores via send_set_channels rather than a raw poke) so the fake
     just stores the friendly value directly as the 'raw' register content
     — sufficient to prove the round trip, not the real translation."""

@@ -248,7 +248,7 @@ RUNG_OFFSET = Rung(
         "READ(63) -> 0x0004. Exactly one raw ch_a value will report 0x0035 "
         "(or 0x003A on a B module). Read it off the table below:\n"
         "    SLOT_OFFSET = (matching ch_a - 32) mod 33\n"
-        "Then set SLOT_OFFSET in pc-app/diagnostics.py and re-run. Current "
+        "Then set SLOT_OFFSET in software/tunki/diagnostics.py and re-run. Current "
         f"setting is {SLOT_OFFSET}, i.e. ch_a = {(32 + SLOT_OFFSET) % FRAME_SLOTS} "
         "is expected to be the one that matches.\n"
         "This is the measurement that settles a value derived by reading RTL "

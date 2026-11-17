@@ -401,12 +401,12 @@ typedef enum
  * Off by default: this UART is the SAME wire as the 2 Mbaud data/command-
  * response stream (Core/Src/main.c only configures USART1 — no separate
  * debug UART exists on this board as wired), so debug text interleaves into
- * the same byte stream the pc-app parses. Flip to (1) to re-enable — also
+ * the same byte stream Tunki parses. Flip to (1) to re-enable — also
  * enables DT_INFO_MSG below (connect/disconnect, discovery, command-relay
  * success/failure) — to diagnose bridge<->MCU issues. Build it as a separate
  * image with `make TRACE=1` (→ build-trace/), never by editing this default.
  * The text shares the USB port with the frames and cannot forge one (every
- * frame magic byte is >= 0x80, ASCII never is); since 2026-09-29 the pc-app
+ * frame magic byte is >= 0x80, ASCII never is); since 2026-09-29 Tunki
  * keeps it in bench/serial_text_*.log rather than discarding it, so a terminal
  * (e.g. tio) is no longer needed to read it. Used 2026-08-06 to diagnose a silent command-relay
  * failure traced to a USART1 RX overrun (see stm32wb0x_it.c) — see PLAN.md
@@ -452,7 +452,7 @@ typedef enum
  * through APP_DBG_MSG (rather than kept as its own separate no-op, as
  * originally) so it's gated by the same CFG_DEBUG_APP_TRACE flag above —
  * inert by default, and flipping that one flag on surfaces
- * vega_bridge_app.c's existing DT_INFO_MSG call sites (cmd relay
+ * bridge_app.c's existing DT_INFO_MSG call sites (cmd relay
  * not-ready/failed/success, discovery, connect/disconnect) for future
  * bridge<->MCU debugging without needing to re-wire this again. */
 #define DT_INFO_MSG(...)  APP_DBG_MSG(__VA_ARGS__)
