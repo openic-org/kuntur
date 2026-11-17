@@ -97,7 +97,7 @@ endmodule
 
 module status_leds_tb;
 	localparam real T_CLKIN = 1.0e3 / 12.0;		// 83.33 ns
-	localparam real T_WCLK  = 87.835;			// ECLKDIV ÷4 at 45.54 MHz
+	localparam real T_WCLK  = 105.402;			// ECLKDIV ÷4 at 37.95 MHz (87.835 at 45.54 before #6b)
 	localparam integer HB = 1 << 23;
 
 	reg clkin = 0, wclk = 0;

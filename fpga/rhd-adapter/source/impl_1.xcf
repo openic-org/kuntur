@@ -20,7 +20,7 @@
 				<BScanVal>0</BScanVal>
 			</Bypass>
 			<File>../../impl_1/intan_rec_adapter_impl_1.bit</File>
-			<FileTime>09/29/26 13:47:25</FileTime>
+			<FileTime>11/17/26 11:39:03</FileTime>
 			<MemoryType>Static Random Access Memory (SRAM)</MemoryType>
 			<Operation>Fast Configuration</Operation>
 			<Option>
@@ -45,7 +45,7 @@
 	</ProjectOptions>
 	<CableOptions>
 		<CableName>USB2</CableName>
-		<PortAdd>FTUSB-0</PortAdd>
-		<USBID>Lattice HW-USBN-2B Ch A Location 1471 Serial VER00001A</USBID>
+		<PortAdd>FTUSB-1</PortAdd>
+		<USBID>Lattice CrossLink-NX Eval Board A Location 1101 Serial FT6WVUEHA</USBID>
 	</CableOptions>
 </ispXCF>

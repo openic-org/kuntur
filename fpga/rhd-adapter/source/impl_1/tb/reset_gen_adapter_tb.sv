@@ -66,7 +66,7 @@
 module reset_gen_adapter_tb;
 	localparam SUP_CYCLES = 20;		// the RTL's count (R-C1 asks for ~16)
 	localparam real T_CLKIN = 83.333;	// 12 MHz
-	localparam real T_WCLK  = 87.8;		// ECLK / 4 at 45.54 MHz
+	localparam real T_WCLK  = 105.4;		// ECLK / 4 at 37.95 MHz (87.8 at 45.54 before #6b)
 
 	reg rstb = 1, pll_lock = 0, tun_on = 0, clkin_en = 1;
 	reg clkin = 0, wclk = 0;
