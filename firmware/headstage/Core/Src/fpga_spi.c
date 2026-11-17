@@ -382,7 +382,7 @@ uint8_t FPGA_SPI_ReadStreamEnable(void)
  * No write protection, matching the RTL (PLAN.md A.1.1g: "partial protection
  * would give a false sense of safety"). These can corrupt the RHD config table
  * and leave the sampling cycle issuing nonsense until the FPGA is reset. The
- * gating is at the pc-app (spec section 2.2), not here.
+ * gating is at Tunki (spec section 2.2), not here.
  *
  * Same calling-context rules as every other function in this section: never
  * from an ISR, never interleaved with an in-progress FPGA_SPI_ReadSamples().

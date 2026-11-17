@@ -13,7 +13,7 @@
  * At 1300 Hz that is ~61 % CPU — should produce visible BLE degradation.
  *
  * Capture output:   cat /dev/ttyACM0 | tee bench.log
- * Plot:             python3 pc-app/plot_bench.py bench.log
+ * Plot:             python3 software/tunki/plot_bench.py bench.log
  */
 
 #include "cpu_bench.h"

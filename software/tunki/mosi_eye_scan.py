@@ -320,7 +320,7 @@ def scan(port, rate_k: int, dwell: int, rows: list, log=print, max_dwell_s: floa
         # STOP_STREAMING above is not undone on purpose: §5.3 asks for a
         # power cycle before any recording, and that restarts streaming.
         log("STREAMING IS STOPPED (the scan does not restart it): power-cycle "
-            "Kuntur before any recording (spec §5.3); pc-app shows no data until then")
+            "Kuntur before any recording (spec §5.3); Tunki shows no data until then")
 
 
 # ── Map → verdict (spec §5.4) ───────────────────────────────────────────────

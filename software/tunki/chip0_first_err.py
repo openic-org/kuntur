@@ -22,8 +22,8 @@ one checked transfer per frame, no amplifier sample lost. mosi_sel stays 4
              READ(63) and MOSI_SCAN_CTRL = 4. Leaves streaming STOPPED.
     restore  STOP; restore only (if a run is abandoned).
 
-pc-app must be closed while this runs (it holds the serial port). Do not
-press pc-app's "Get settings" between arm and read: it puts READ(63) back
+Tunki must be closed while this runs (it holds the serial port). Do not
+press Tunki's "Get settings" between arm and read: it puts READ(63) back
 in slot 32 and the checker goes blind (`read` detects that).
 
 Every run appends a row to bench/chip0_first_err.csv.
@@ -117,7 +117,7 @@ def reading(s: Snapshot) -> tuple[str, str]:
         return ("void", "CHK_COUNT = 0: the checker counted nothing since the clear. Result void.")
     if not s.valid:
         return ("none", "no wrong answer on any half since the clear. If the health monitor saw "
-                        "chip0 die, the death is not on MISO (stream path, ch_sel or pc-app).")
+                        "chip0 die, the death is not on MISO (stream path, ch_sel or Tunki).")
     where = HALF_NAMES[s.half]
     if s.half >= 2:
         return ("chip1", f"first error on {where} ({s.ans:#06x} for {s.exp:#06x}): chip1 failed "
@@ -213,7 +213,7 @@ def main(argv=None) -> int:
     try:
         port = SerialRegPort(a.port)
     except Exception as e:
-        print(f"cannot open {a.port}: {e} (is pc-app still open?)", file=sys.stderr)
+        print(f"cannot open {a.port}: {e} (is Tunki still open?)", file=sys.stderr)
         return 2
     try:
         if a.action == "arm":
@@ -229,7 +229,7 @@ def main(argv=None) -> int:
                     + ("streaming started" if ok else "START ack 0"))
             log_row("arm", s, note)
             print(f"armed at {datetime.now():%H:%M:%S}. {note}.\n"
-                  "Now open pc-app, recording on, apply the channels. Do not press 'Get settings'.")
+                  "Now open Tunki, recording on, apply the channels. Do not press 'Get settings'.")
             return 0
 
         port.stop_streaming()

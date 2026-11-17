@@ -78,8 +78,8 @@ all: main-build
 main-build: kuntur-mcu.elf secondary-outputs
 
 # Tool invocations
-kuntur-mcu.elf kuntur-mcu.map: $(OBJS) $(USER_OBJS) /data/projects/kuntur/kuntur144/mcu/kuntur-mcu/STM32WB09TEFX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "kuntur-mcu.elf" @"objects.list" $(USER_OBJS) -Wl,--start-group $(LIBS) -Wl,--end-group -mcpu=cortex-m0plus -T"/data/projects/kuntur/kuntur144/mcu/kuntur-mcu/STM32WB09TEFX_FLASH.ld" --specs=nosys.specs -Wl,-Map="kuntur-mcu.map" -Wl,--gc-sections -static -L/home/manuel/STM32Cube/Repository/STM32Cube_FW_WB0_V1.4.0/Middlewares/ST/STM32_BLE/cryptolib -L/home/manuel/STM32Cube/Repository/STM32Cube_FW_WB0_V1.4.0/Middlewares/ST/STM32_BLE/stack/lib -z noexecstack --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+kuntur-mcu.elf kuntur-mcu.map: $(OBJS) $(USER_OBJS) ../STM32WB09TEFX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "kuntur-mcu.elf" @"objects.list" $(USER_OBJS) -Wl,--start-group $(LIBS) -Wl,--end-group -mcpu=cortex-m0plus -T"../STM32WB09TEFX_FLASH.ld" --specs=nosys.specs -Wl,-Map="kuntur-mcu.map" -Wl,--gc-sections -static -L/home/manuel/STM32Cube/Repository/STM32Cube_FW_WB0_V1.4.0/Middlewares/ST/STM32_BLE/cryptolib -L/home/manuel/STM32Cube/Repository/STM32Cube_FW_WB0_V1.4.0/Middlewares/ST/STM32_BLE/stack/lib -z noexecstack --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

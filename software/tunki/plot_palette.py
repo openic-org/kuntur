@@ -1,5 +1,5 @@
 """
-Vega dark-theme color palette.
+Tunki dark-theme color palette.
 
 Usage:
     from plot_palette import PALETTE, apply_dark_axes

@@ -1,16 +1,16 @@
 /*
- * main.c — Vega WB09KE BLE-to-UART bridge entry point.
+ * main.c — Kuntur BLE-USB bridge (NUCLEO-WB09KE) entry point.
  *
  * Identical to the reference DataThroughput client except:
  *   • USART1 baud rate set to 2 000 000 (2 Mbaud) — 30 kSPS×59 pairs×~4 B/pair
  *     generates ~126 KB/s; 115 200 baud is insufficient even for 4 kSPS.
- *   • __io_putchar routes through the interrupt-driven VEGA_UART ring buffer
+ *   • __io_putchar routes through the interrupt-driven BRIDGE_UART ring buffer
  *     instead of busy-polling TXE; printf/DT_INFO_MSG never block the BLE task.
  */
 
 #include "main.h"
 #include "stm32wb0x_ll_usart.h"
-#include "vega_uart.h"
+#include "bridge_uart.h"
 
 PKA_HandleTypeDef  hpka;
 UART_HandleTypeDef huart1;
@@ -34,7 +34,7 @@ int main(void)
     MX_RADIO_TIMER_Init();
     MX_PKA_Init();
     MX_USART1_UART_Init();
-    VEGA_UART_Init();
+    BRIDGE_UART_Init();
 
     MX_APPE_Init(NULL);
 
@@ -132,7 +132,7 @@ static void MX_USART1_UART_Init(void)
 int __io_putchar(int ch)
 {
     uint8_t b = (uint8_t)ch;
-    VEGA_UART_Write(&b, 1U);
+    BRIDGE_UART_Write(&b, 1U);
     return ch;
 }
 

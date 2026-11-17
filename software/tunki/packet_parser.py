@@ -136,7 +136,7 @@ class SeqGapTracker:
                       pause: that is the "256×k reads as zero" case.
 
     The real fix is A.7 step 2's cumulative 32-bit telemetry counters; this
-    only stops the pc-app presenting a lower bound as a total.
+    only stops Tunki presenting a lower bound as a total.
     """
 
     def __init__(self):

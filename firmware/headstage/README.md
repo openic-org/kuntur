@@ -1,6 +1,6 @@
-# Kuntur MCU Firmware
+# Kuntur headstage firmware
 
-STM32WB09KE firmware for the **Kuntur** headstage. Receives two channels of FPGA data at 30 000 SPS and streams them in real time over Bluetooth Low Energy to the [Vega](https://github.com/openic-org/vega) visualisation system via a NUCLEO-WB09KE USB bridge.
+STM32WB09KE firmware for the **Kuntur** headstage. Receives two channels of FPGA data at 30 000 SPS and streams them in real time over Bluetooth Low Energy to [Tunki](../../software/tunki/), the desktop app, via the NUCLEO-WB09KE [BLE–USB bridge](../ble-usb-bridge/).
 
 ---
 
@@ -17,7 +17,7 @@ STM32WB09KE firmware for the **Kuntur** headstage. Receives two channels of FPGA
 ## Project Layout
 
 ```
-kuntur-mcu/
+firmware/headstage/
 ├── Core/
 │   ├── Inc/            app_conf.h, main.h, utilities_conf.h …
 │   └── Src/            main.c, app_entry.c, stm32wb0x_it.c …
@@ -43,7 +43,7 @@ The project is managed by **STM32CubeIDE** (Eclipse-based). The `Debug/` directo
 # Typical location: /opt/st/stm32cubeide_<version>/plugins/
 #   com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.*/tools/bin
 
-make -C kuntur-mcu/Debug all
+make -C firmware/headstage/Debug all     # from the repository root
 ```
 
 Build outputs: `Debug/kuntur-mcu.elf`, `Debug/kuntur-mcu.hex`.
@@ -57,7 +57,7 @@ Use **STM32CubeProgrammer** via the NUCLEO on-board ST-LINK.
 ```bash
 STM32_Programmer_CLI \
   -c port=SWD sn=<serial> \
-  -w kuntur-mcu/Debug/kuntur-mcu.elf \
+  -w firmware/headstage/Debug/kuntur-mcu.elf \
   -v -rst
 ```
 
@@ -180,4 +180,4 @@ The pipeline switches from simulation to live data automatically once ≥ 59 pai
 
 ## License
 
-Apache License 2.0 — see the root `LICENSE` file of the Vega repository.
+Apache License 2.0 — see `LICENSE` at the root of this repository.

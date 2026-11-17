@@ -13,7 +13,7 @@ to 0 at ..." diagnostic line (added stream_app.c, StreamAssemblePacket) from
 the same UART capture, and reports which one each SKP sits closest to.
 
 Usage:
-    python3 pc-app/correlate_stalls.py <recording.csv> <stall_log.txt>
+    python3 software/tunki/correlate_stalls.py <recording.csv> <stall_log.txt>
 """
 
 import re

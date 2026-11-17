@@ -1,5 +1,5 @@
 """
-MainWindow — top-level PyQt6 window for the Vega PC app.
+MainWindow — top-level PyQt6 window for Tunki.
 """
 
 import csv
@@ -39,8 +39,25 @@ CHIP_RANGE_TEXT = "Chip 0: channels 0-63   •   Chip 1: channels 64-127"
 # (kuntur_rate.py, PLAN.md R7, recording-format.md §3a): it replaced
 # DELIVERED_SPS (graph size) and SAMPLE_RATE_CHANNEL_HZ (sidecar). No
 # default on first start (§3a.5 D2); remembered under this key.
-SETTINGS_ORG, SETTINGS_APP = "vega", "pc-app"
+SETTINGS_ORG, SETTINGS_APP = "kuntur", "tunki"
+# Before the 2026-11 rename the app was "Vega"/"pc-app". migrate_settings()
+# carries a remembered rate across once, so the rename alone does not make
+# the operator choose it again.
+LEGACY_SETTINGS_ORG, LEGACY_SETTINGS_APP = "vega", "pc-app"
 RATE_SETTING_KEY = "kuntur_rate"
+
+
+def migrate_settings() -> None:
+    """Copy the rate from the pre-rename settings if none is stored yet.
+
+    Never overwrites a value already stored under the new name, and leaves
+    the old settings in place."""
+    new = QSettings(SETTINGS_ORG, SETTINGS_APP)
+    if new.contains(RATE_SETTING_KEY):
+        return
+    old = QSettings(LEGACY_SETTINGS_ORG, LEGACY_SETTINGS_APP)
+    if old.contains(RATE_SETTING_KEY):
+        new.setValue(RATE_SETTING_KEY, old.value(RATE_SETTING_KEY))
 
 # How long to wait for a real STOP_STREAMING/START_STREAMING acknowledgment
 # (section 5.6) before giving up and proceeding anyway — same reasoning as
@@ -78,7 +95,7 @@ COMMAND_GAP_MS = 15
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Vega — PC Data Viewer")
+        self.setWindowTitle("Tunki — Kuntur data viewer")
         self.resize(1200, 700)
 
         self._reader   = SerialReader(self)
@@ -235,6 +252,7 @@ class MainWindow(QMainWindow):
             "Per-channel rate of the flashed Kuntur build. Sets sample timing, "
             "liveness timing, the plot and the recording sidecar. "
             "Fixed while connected.")
+        migrate_settings()
         self._rate = kuntur_rate.from_key(
             QSettings(SETTINGS_ORG, SETTINGS_APP).value(RATE_SETTING_KEY))
         if self._rate:
@@ -692,7 +710,7 @@ class MainWindow(QMainWindow):
                     "2026-08-27 (PLAN.md A.6.2, DECISION 1). Applies to "
                     "CH0/CH1 as amplifier channels, which is what "
                     "SET_CHANNELS selects in normal operation -- see "
-                    "pc-app/rhd2164_units.py for the auxiliary-input and "
+                    "software/tunki/rhd2164_units.py for the auxiliary-input and "
                     "supply-sensor step sizes, not used by this field."
                 ),
             },
@@ -993,10 +1011,10 @@ class MainWindow(QMainWindow):
         wire_b, raw_b = channel_mapping.physical_to_wire(ch_b)
 
         # Printed, not just logged internally: this is the exact byte value
-        # about to leave the pc-app on the wire. The WB09KE bridge is a
-        # transparent relay (vega_bridge_app.c's vega_bridge_relay_command()
+        # about to leave Tunki on the wire. The BLE-USB bridge is a
+        # transparent relay (bridge_app.c's bridge_relay_command()
         # — "no interpretation of the payload beyond framing"), so what's
-        # printed here is byte-for-byte what reaches the kuntur-mcu's 0xFFF1
+        # printed here is byte-for-byte what reaches the headstage MCU's 0xFFF1
         # characteristic; capturing it on the bridge itself would need
         # DT_INFO_MSG on CFG_DEBUG_APP_TRACE, which shares USART1 with the
         # live command/data stream and is a known, deliberately-unfixed
@@ -1053,7 +1071,7 @@ class MainWindow(QMainWindow):
         and UI never carry the wire-compensated value.
 
         wire_to_physical() can raise for a wire value physical_to_wire()
-        never produces — this pc-app never sends one, so seeing one back
+        never produces — Tunki never sends one, so seeing one back
         means a corrupted/unexpected response, not a real channel; handled
         as its own failure state rather than storing a fabricated >127
         "channel number" into the sidecar (see channel_mapping.py)."""

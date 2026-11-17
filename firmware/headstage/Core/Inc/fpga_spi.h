@@ -94,7 +94,7 @@ uint8_t FPGA_SPI_RawToChannel(uint8_t raw_code);
  * preceding write sequence is needed. One-transfer-deep pipeline: word 196's
  * value lands on transfer 2, word 197's on transfer 3.
  * Returns raw FPGA codes — convert with FPGA_SPI_RawToChannel() before
- * exposing to BLE/pc-app. Same calling-context rules as FPGA_SPI_SetChannels().
+ * exposing to BLE/Tunki. Same calling-context rules as FPGA_SPI_SetChannels().
  * See docs/interfaces/channel-selection-control-plane.md section 4.1. */
 void FPGA_SPI_ReadChannels(uint8_t *ch_a_raw, uint8_t *ch_b_raw);
 
@@ -121,7 +121,7 @@ uint8_t FPGA_SPI_ReadStreamEnable(void);
  *
  * NO WRITE PROTECTION, matching the RTL. These can corrupt the RHD config
  * table and leave the sampling cycle issuing nonsense until the FPGA is reset;
- * an FPGA reset is the documented recovery. Gating is the pc-app's job
+ * an FPGA reset is the documented recovery. Gating is Tunki's job
  * (spec 2.2).
  *
  * Calling context, all of them: never from an ISR, never interleaved with an

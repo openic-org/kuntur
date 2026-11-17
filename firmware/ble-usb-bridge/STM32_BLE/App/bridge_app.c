@@ -1,5 +1,5 @@
 /*
- * vega_bridge_app.c — GATT client for the Vega WB09KE BLE-to-UART bridge.
+ * bridge_app.c — GATT client for the Kuntur BLE-USB bridge (NUCLEO-WB09KE).
  *
  * Connects as central/client to the Kuntur STM32WB09 peripheral ("Kuntur-Headstage"),
  * discovers service 0xFFF0 and its notify characteristic 0xFFF2, enables
@@ -28,24 +28,24 @@
 #include "main.h"
 #include "app_common.h"
 #include "ble.h"
-#include "vega_bridge_app.h"
-#include "vega_uart.h"
+#include "bridge_app.h"
+#include "bridge_uart.h"
 #include "stm32_seq.h"
 #include "app_ble.h"
 #include "ble_evt.h"
 #include <stdio.h>
 #include <string.h>
 
-/* ── Vega service / characteristic UUIDs ────────────────────────────────── */
+/* ── Kuntur service / characteristic UUIDs ────────────────────────────────── */
 
-#define VEGA_SVC_UUID      (0xFFF0)
-#define VEGA_NOTIFY_UUID   (0xFFF2)
-#define VEGA_CMD_UUID      (0xFFF1)   /* write-without-response, see A.2 spec */
-#define VEGA_RESPONSE_UUID (0xFFF3)   /* notify, command-response, see spec section 4 */
-#define VEGA_TELEMETRY_UUID (0xFFF4)  /* notify, ~1 Hz telemetry frame — see
+#define KUNTUR_SVC_UUID      (0xFFF0)
+#define KUNTUR_NOTIFY_UUID   (0xFFF2)
+#define KUNTUR_CMD_UUID      (0xFFF1)   /* write-without-response, see A.2 spec */
+#define KUNTUR_RESPONSE_UUID (0xFFF3)   /* notify, command-response, see spec section 4 */
+#define KUNTUR_TELEMETRY_UUID (0xFFF4)  /* notify, ~1 Hz telemetry frame — see
                                        * docs/interfaces/stream-packet-format.md section 6 */
 
-/* ── Frame headers for UART output (bridge -> pc-app) ────────────────────── */
+/* ── Frame headers for UART output (bridge -> Tunki) ────────────────────── */
 
 #define FRAME_MAGIC_0      (0xAAU)   /* sample data */
 #define FRAME_MAGIC_1      (0x55U)
@@ -56,7 +56,7 @@
 
 /* Bytes this bridge appends to the MCU's telemetry payload: tx_ring_drop_bytes
  * then tx_ring_drop_frames, both uint32 little-endian — section 6.2 offsets
- * 30 and 34. They go LAST and stay last: the pc-app locates them from the END
+ * 30 and 34. They go LAST and stay last: Tunki locates them from the END
  * of the payload, so a future telemetry_version that adds MCU fields grows the
  * frame without moving them. */
 #define TELEMETRY_BRIDGE_BYTES  (8U)
@@ -133,7 +133,7 @@ static void parse_services(aci_att_clt_read_by_group_type_resp_event_rp0 *p_evt)
         uint16_t end   = UNPACK_U16(ptr + 2);
         uint16_t uuid  = UNPACK_U16(ptr + 4);
 
-        if (uuid == VEGA_SVC_UUID) {
+        if (uuid == KUNTUR_SVC_UUID) {
             s_ctx.svc_start_hdl = start;
             s_ctx.svc_end_hdl   = end;
             DT_INFO_MSG("Found 0xFFF0: handles [0x%04X-0x%04X]\r\n", start, end);
@@ -154,16 +154,16 @@ static void parse_chars(aci_att_clt_read_by_type_resp_event_rp0 *p_evt)
         uint16_t value_hdl = UNPACK_U16(ptr + 3);
         uint16_t uuid      = UNPACK_U16(ptr + 5);
 
-        if (uuid == VEGA_NOTIFY_UUID) {
+        if (uuid == KUNTUR_NOTIFY_UUID) {
             s_ctx.notify_value_hdl = value_hdl;
             DT_INFO_MSG("Found 0xFFF2 value handle: 0x%04X\r\n", value_hdl);
-        } else if (uuid == VEGA_CMD_UUID) {
+        } else if (uuid == KUNTUR_CMD_UUID) {
             s_ctx.cmd_value_hdl = value_hdl;
             DT_INFO_MSG("Found 0xFFF1 value handle: 0x%04X\r\n", value_hdl);
-        } else if (uuid == VEGA_RESPONSE_UUID) {
+        } else if (uuid == KUNTUR_RESPONSE_UUID) {
             s_ctx.resp_value_hdl = value_hdl;
             DT_INFO_MSG("Found 0xFFF3 value handle: 0x%04X\r\n", value_hdl);
-        } else if (uuid == VEGA_TELEMETRY_UUID) {
+        } else if (uuid == KUNTUR_TELEMETRY_UUID) {
             s_ctx.telem_value_hdl = value_hdl;
             DT_INFO_MSG("Found 0xFFF4 value handle: 0x%04X\r\n", value_hdl);
         }
@@ -215,11 +215,11 @@ static void parse_notification(aci_gatt_clt_notification_event_rp0 *p_evt)
         (uint8_t)(len >> 8),
     };
 
-    VEGA_UART_Write(hdr, 4U);
-    VEGA_UART_Write(p_evt->Attribute_Value, len);
+    BRIDGE_UART_Write(hdr, 4U);
+    BRIDGE_UART_Write(p_evt->Attribute_Value, len);
 }
 
-/* Relays a 0xFFF3 SET_CHANNELS readback notification to the pc-app — see
+/* Relays a 0xFFF3 SET_CHANNELS readback notification to Tunki — see
  * docs/interfaces/channel-selection-control-plane.md section 4.4. Same
  * framing shape as parse_notification()'s data frame, distinct magic. */
 static void parse_response_notification(aci_gatt_clt_notification_event_rp0 *p_evt)
@@ -234,8 +234,8 @@ static void parse_response_notification(aci_gatt_clt_notification_event_rp0 *p_e
         (uint8_t)(len >> 8),
     };
 
-    VEGA_UART_Write(hdr, 4U);
-    VEGA_UART_Write(p_evt->Attribute_Value, len);
+    BRIDGE_UART_Write(hdr, 4U);
+    BRIDGE_UART_Write(p_evt->Attribute_Value, len);
 }
 
 /* Re-frames a 0xFFF4 telemetry notification as 0xDD 0x22, appending this
@@ -261,7 +261,7 @@ static void parse_telemetry_notification(aci_gatt_clt_notification_event_rp0 *p_
 
     uint32_t drop_bytes  = 0;
     uint32_t drop_frames = 0;
-    VEGA_UART_GetDropStats(&drop_bytes, &drop_frames);
+    BRIDGE_UART_GetDropStats(&drop_bytes, &drop_frames);
 
     uint16_t      mcu_len = p_evt->Attribute_Value_Length;
     uint16_t      len     = (uint16_t)(mcu_len + TELEMETRY_BRIDGE_BYTES);
@@ -285,9 +285,9 @@ static void parse_telemetry_notification(aci_gatt_clt_notification_event_rp0 *p_
         (uint8_t)((drop_frames >> 24) & 0xFFU),
     };
 
-    VEGA_UART_Write(hdr, 4U);
-    VEGA_UART_Write(p_evt->Attribute_Value, mcu_len);
-    VEGA_UART_Write(tail, TELEMETRY_BRIDGE_BYTES);
+    BRIDGE_UART_Write(hdr, 4U);
+    BRIDGE_UART_Write(p_evt->Attribute_Value, mcu_len);
+    BRIDGE_UART_Write(tail, TELEMETRY_BRIDGE_BYTES);
 
     /* First one, then ~once a minute at 1 Hz. Compiled out unless
      * CFG_DEBUG_APP_TRACE (make TRACE=1). */
@@ -356,7 +356,7 @@ static BLEEVT_EvtAckStatus_t Bridge_EventHandler(aci_blecore_event *p_evt)
 
 /* ── Discovery task ──────────────────────────────────────────────────────── */
 
-static void vega_bridge_discover_all(void)
+static void bridge_discover_all(void)
 {
     if (s_ctx.state != GATT_CLIENT_APP_DISCOVER_SERVICES) return;
 
@@ -460,13 +460,13 @@ static void vega_bridge_discover_all(void)
  * user-triggered SET_CHANNELS — no torn reads, since the M0+ ISR always runs
  * to completion before the task it interrupted resumes. Revisit if a command
  * is added that can't tolerate coalescing/loss under back-to-back writes. */
-static uint8_t s_cmd_relay_buf[VEGA_UART_CMD_MAX_PAYLOAD];
+static uint8_t s_cmd_relay_buf[BRIDGE_UART_CMD_MAX_PAYLOAD];
 static uint8_t s_cmd_relay_len;
 
-void VEGA_BRIDGE_OnCommandFrame(const uint8_t *payload, uint8_t len)
+void BRIDGE_OnCommandFrame(const uint8_t *payload, uint8_t len)
 {
     /* ISR context — copy and defer, never touch the BLE stack here. len is
-     * already bounded by vega_uart.c's own VEGA_UART_CMD_MAX_PAYLOAD check. */
+     * already bounded by bridge_uart.c's own BRIDGE_UART_CMD_MAX_PAYLOAD check. */
     memcpy(s_cmd_relay_buf, payload, len);
     s_cmd_relay_len = len;
     UTIL_SEQ_SetTask(1U << CFG_TASK_UART_CMD_RELAY_ID, CFG_SEQ_PRIO_0);
@@ -475,9 +475,9 @@ void VEGA_BRIDGE_OnCommandFrame(const uint8_t *payload, uint8_t len)
 /* Transparent relay — no interpretation of the payload beyond framing, see
  * docs/interfaces/channel-selection-control-plane.md section 3. A frame that
  * arrives while disconnected or before 0xFFF1 is discovered is dropped;
- * there's no response channel to report that back to the pc-app on a
+ * there's no response channel to report that back to Tunki on a
  * write-without-response characteristic. */
-static void vega_bridge_relay_command(void)
+static void bridge_relay_command(void)
 {
     if (s_ctx.state != GATT_CLIENT_APP_CONNECTED || s_ctx.cmd_value_hdl == 0x0000U) {
         DT_INFO_MSG("cmd relay: not ready (state=%d, hdl=0x%04X), dropped\r\n",
@@ -510,11 +510,11 @@ void GATT_CLIENT_APP_Init(void)
     if (ret != 0) Error_Handler();
 
     UTIL_SEQ_RegTask(1U << CFG_TASK_DISCOVER_SERVICES_ID, UTIL_SEQ_RFU,
-                     vega_bridge_discover_all);
+                     bridge_discover_all);
     UTIL_SEQ_RegTask(1U << CFG_TASK_UART_CMD_RELAY_ID, UTIL_SEQ_RFU,
-                     vega_bridge_relay_command);
+                     bridge_relay_command);
 
-    DT_INFO_MSG("Vega bridge GATT client ready\r\n");
+    DT_INFO_MSG("BLE-USB bridge GATT client ready\r\n");
 }
 
 void GATT_CLIENT_APP_Notification(GATT_CLIENT_APP_ConnHandle_Notif_evt_t *p_Notif)

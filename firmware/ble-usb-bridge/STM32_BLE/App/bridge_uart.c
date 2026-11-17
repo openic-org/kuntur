@@ -1,5 +1,5 @@
 /*
- * vega_uart.c — interrupt-driven UART TX ring buffer.
+ * bridge_uart.c — interrupt-driven UART TX ring buffer.
  *
  * Single-producer (main context) / single-consumer (TXE ISR) lockless ring
  * buffer. On Cortex-M0+ all 32-bit aligned reads/writes are atomic, and
@@ -8,7 +8,7 @@
  * Head is written only by the main context; tail only by the TXE ISR.
  * No mutex needed.
  *
- * The truncation counters are the one exception: VEGA_UART_Write() is
+ * The truncation counters are the one exception: BRIDGE_UART_Write() is
  * reachable from ISR context when CFG_DEBUG_APP_TRACE is on (DT_INFO_MSG
  * inside USART1_IRQHandler), and the M0+ has no atomic read-modify-write, so
  * they are incremented under a short critical section. Only the drop path
@@ -16,31 +16,31 @@
  */
 
 #include <stddef.h>
-#include "vega_uart.h"
-#include "vega_bridge_app.h"
+#include "bridge_uart.h"
+#include "bridge_app.h"
 #include "stm32wb0x.h"
 #include "stm32wb0x_ll_usart.h"
 #include "stm32wb0x_hal.h"   /* HAL_GetTick() — RX_FRAME_TIMEOUT_MS below */
 
-#define BUF_MASK  (VEGA_UART_TX_BUF_SIZE - 1U)
+#define BUF_MASK  (BRIDGE_UART_TX_BUF_SIZE - 1U)
 
-static uint8_t           s_buf[VEGA_UART_TX_BUF_SIZE];
+static uint8_t           s_buf[BRIDGE_UART_TX_BUF_SIZE];
 static volatile uint16_t s_head;   /* next write slot  — main context only */
 static volatile uint16_t s_tail;   /* next read  slot  — TXE ISR only      */
 
-/* Truncation accounting — see the note in vega_uart.h. Zeroed at startup by
- * the C runtime; deliberately not touched by VEGA_UART_Init() so a re-init
+/* Truncation accounting — see the note in bridge_uart.h. Zeroed at startup by
+ * the C runtime; deliberately not touched by BRIDGE_UART_Init() so a re-init
  * cannot erase the history. */
 static volatile uint32_t s_drop_bytes;    /* bytes discarded, ring was full   */
 static volatile uint32_t s_drop_frames;   /* Write() calls that truncated     */
 
-void VEGA_UART_Init(void)
+void BRIDGE_UART_Init(void)
 {
     s_head = 0;
     s_tail = 0;
 }
 
-void VEGA_UART_Write(const uint8_t *data, uint16_t len)
+void BRIDGE_UART_Write(const uint8_t *data, uint16_t len)
 {
     uint16_t head = s_head;
     uint16_t i;
@@ -56,7 +56,7 @@ void VEGA_UART_Write(const uint8_t *data, uint16_t len)
     if (i < len) {
         /* Truncated. (len - i) bytes of this frame never reach the wire, and
          * the frame already committed above is now short of its length field
-         * — the pc-app will resync on the next magic pair. Nothing can be
+         * — Tunki will resync on the next magic pair. Nothing can be
          * done about it here; the point is that it stops being silent. */
         uint32_t primask = __get_PRIMASK();
         __disable_irq();
@@ -68,7 +68,7 @@ void VEGA_UART_Write(const uint8_t *data, uint16_t len)
     LL_USART_EnableIT_TXE(USART1);
 }
 
-void VEGA_UART_GetDropStats(uint32_t *p_bytes, uint32_t *p_frames)
+void BRIDGE_UART_GetDropStats(uint32_t *p_bytes, uint32_t *p_frames)
 {
     /* Each load is a single aligned 32-bit read, atomic on the M0+, so no
      * critical section is needed to read them — but the pair is not sampled
@@ -78,7 +78,7 @@ void VEGA_UART_GetDropStats(uint32_t *p_bytes, uint32_t *p_frames)
     if (p_frames != NULL) *p_frames = s_drop_frames;
 }
 
-uint8_t VEGA_UART_TxBytePop(uint8_t *byte)
+uint8_t BRIDGE_UART_TxBytePop(uint8_t *byte)
 {
     uint16_t tail = s_tail;
     if (tail == s_head) return 0;           /* empty */
@@ -87,7 +87,7 @@ uint8_t VEGA_UART_TxBytePop(uint8_t *byte)
     return 1;
 }
 
-/* ── Command-frame RX (pc-app -> bridge) ─────────────────────────────────────
+/* ── Command-frame RX (Tunki -> bridge) ─────────────────────────────────────
  * Runs entirely in ISR context (called from USART1_IRQHandler's RXNE path).
  * Single-producer, no concurrency concerns — the debug-console path
  * (UartRxCpltCallback) runs in the same ISR, never concurrently with this.
@@ -106,26 +106,26 @@ typedef enum
 } RxState_t;
 
 static RxState_t s_rx_state = RX_IDLE;
-static uint8_t   s_rx_buf[VEGA_UART_CMD_MAX_PAYLOAD];
+static uint8_t   s_rx_buf[BRIDGE_UART_CMD_MAX_PAYLOAD];
 static uint8_t   s_rx_len;
 static uint8_t   s_rx_idx;
 
-/* Timeout backstop for a stuck partial frame — see vega_uart.h's comment on
- * VEGA_UART_RxReset(). At 2 Mbaud a legitimately-continuous frame's byte
+/* Timeout backstop for a stuck partial frame — see bridge_uart.h's comment on
+ * BRIDGE_UART_RxReset(). At 2 Mbaud a legitimately-continuous frame's byte
  * gap is ~5 us; 5 ms is ~1000x that margin, so any real transmission never
  * trips this, while a desynced parser can't wait longer than 5 ms for a
- * byte that isn't coming. Still far short of the pc-app's ~2000 ms
+ * byte that isn't coming. Still far short of Tunki's ~2000 ms
  * ACK_TIMEOUT_MS retry gap, so a retry always finds the parser at RX_IDLE
  * — it never lands on a still-stuck frame. */
 #define RX_FRAME_TIMEOUT_MS  5U
 static uint32_t s_rx_last_byte_tick;
 
-void VEGA_UART_RxReset(void)
+void BRIDGE_UART_RxReset(void)
 {
     s_rx_state = RX_IDLE;
 }
 
-uint8_t VEGA_UART_RxByte(uint8_t byte)
+uint8_t BRIDGE_UART_RxByte(uint8_t byte)
 {
     uint32_t now = HAL_GetTick();
     if (s_rx_state != RX_IDLE && (now - s_rx_last_byte_tick) > RX_FRAME_TIMEOUT_MS)
@@ -163,7 +163,7 @@ uint8_t VEGA_UART_RxByte(uint8_t byte)
         s_rx_len = byte;
         if (byte == 0U)
             s_rx_state = RX_IDLE;      /* empty frame, nothing follows */
-        else if (byte > VEGA_UART_CMD_MAX_PAYLOAD)
+        else if (byte > BRIDGE_UART_CMD_MAX_PAYLOAD)
             s_rx_state = RX_DISCARD;   /* oversized — s_rx_len doubles as remaining-count */
         else
             s_rx_state = RX_PAYLOAD;
@@ -173,7 +173,7 @@ uint8_t VEGA_UART_RxByte(uint8_t byte)
         s_rx_buf[s_rx_idx++] = byte;
         if (s_rx_idx >= s_rx_len)
         {
-            VEGA_BRIDGE_OnCommandFrame(s_rx_buf, s_rx_len);
+            BRIDGE_OnCommandFrame(s_rx_buf, s_rx_len);
             s_rx_state = RX_IDLE;
         }
         return 1;

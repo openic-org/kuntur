@@ -9,7 +9,7 @@ transition loses a channel partway through, silently, gets it back, and nothing
 in the system notices.
 
 That is an experiment-integrity problem rather than a bench annoyance — the
-animal test is one-shot — so the pc-app has to notice on its own. A pre-session
+animal test is one-shot — so Tunki has to notice on its own. A pre-session
 self-test is insufficient by construction: it would pass and the channel could
 still vanish twenty minutes later.
 

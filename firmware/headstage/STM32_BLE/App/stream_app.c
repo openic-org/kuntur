@@ -128,7 +128,7 @@ static uint8_t  s_pending_ch_b;
  * commands back to back, and each one was emitting ~3 APP_DBG_MSG lines. At
  * 115200 that is ~15 ms of BLOCKING UART per command, and USART1 sits on APB1,
  * which the BLE radio gates — the same hazard that forced the FPGA SPI onto
- * bit-banged AHB GPIO. The symptom was a steady trickle of pc-app command
+ * bit-banged AHB GPIO. The symptom was a steady trickle of Tunki command
  * timeouts (recovered by retry) and one rung aborting outright in its restore
  * phase, which leaves the FPGA half-reconfigured.
  *
@@ -188,7 +188,7 @@ static volatile uint8_t s_start_streaming_pending;
  *  s_pending_ch_a/b or s_streaming_stopped mid-use by the in-progress
  *  operation — observed 2026-08-06 as a real bug (not hypothetical): the
  *  debug log showed a new STOP_STREAMING + SET_CHANNELS cycle's prints
- *  interleaved *inside* a still-running flush's own prints, and the pc-app
+ *  interleaved *inside* a still-running flush's own prints, and Tunki
  *  intermittently got "no response" for a SET_CHANNELS that had been
  *  silently orphaned this way (pending flag set, but streaming had already
  *  resumed by the time anything checked it again). STREAM_APP_OnCommandWrite()
@@ -1115,7 +1115,7 @@ static void StreamSendTask(void)
         StreamFlushFpgaFifo();          /* ... so this drains a static backlog, not a moving target */
       }
       s_command_busy = 0U;
-      /* Real MCU confirmation, not a pc-app-side timer — see
+      /* Real MCU confirmation, not a host-side timer — see
        * docs/interfaces/channel-selection-control-plane.md section 5.6. */
       STREAM_NotifyStreamingAck(STREAM_RESPONSE_TYPE_STOP_STREAMING,
                                  (enabled_after_stop == 0U) ? 1U : 0U,
@@ -1142,7 +1142,7 @@ static void StreamSendTask(void)
       s_command_busy = 1U;
       FPGA_SPI_RegWrite16(s_pending_reg_addr, s_pending_reg_value);
       /* Automatic readback: the ack must carry what the regbank actually
-       * holds, not what we sent. Also gives the pc-app's rung scripts a free
+       * holds, not what we sent. Also gives Tunki's rung scripts a free
        * per-write verification with no extra round trip, which is what makes a
        * 32-word sampling-table rewrite trustworthy. */
       uint16_t readback = FPGA_SPI_RegRead16(s_pending_reg_addr);
@@ -1195,13 +1195,13 @@ static void StreamSendTask(void)
       {
         /* Not fatal the way a failed disable is (worst case here: the tight
          * loop resumes and reads nothing but the empty-FIFO sentinel —
-         * safe, already-handled, and immediately visible in the pc-app's
+         * safe, already-handled, and immediately visible in Tunki's
          * underrun stats) — but still worth flagging loudly on the bench. */
         APP_DBG_MSG("STREAM: START_STREAMING — stream_enable readback=%u (expected 1), FIFO WRITE DID NOT TAKE\n",
                     enabled_after_start);
       }
       APP_DBG_MSG("STREAM: START_STREAMING — resuming\n");
-      /* Real MCU confirmation, not a pc-app-side timer — see
+      /* Real MCU confirmation, not a host-side timer — see
        * docs/interfaces/channel-selection-control-plane.md section 5.6. */
       STREAM_NotifyStreamingAck(STREAM_RESPONSE_TYPE_START_STREAMING,
                                  (enabled_after_start == 1U) ? 1U : 0U,
@@ -1557,8 +1557,8 @@ void STREAM_APP_OnCommandWrite(uint16_t conn_handle, const uint8_t *p_data, uint
    * see the comment above s_command_busy for the real bug this prevents
    * (a new command overwriting pending state mid-use by an in-progress
    * SetChannelsTask()/StreamFlushFpgaFifo() call). One full STOP/SET/START
-   * cycle is atomic; the operator/pc-app is expected to wait for this one
-   * to finish (readback, or the pc-app's own timeout) before starting the
+   * cycle is atomic; the operator/Tunki is expected to wait for this one
+   * to finish (readback, or Tunki's own timeout) before starting the
    * next. */
   if (s_command_busy)
   {
@@ -1710,7 +1710,7 @@ void STREAM_APP_ResumeSending(void)
    * printing every resume at ~133 Hz would flood the UART and hide the signal.
    * now_s/now_sub use the same RTC encoding as the packet header timestamp
    * (StreamGetTimestamp), so this can be matched directly against a specific
-   * SKP event's timestamp_us in a simultaneous pc-app recording — not just
+   * SKP event's timestamp_us in a simultaneous Tunki recording — not just
    * compared in aggregate. */
   if (stall_us > 3000U)
   {

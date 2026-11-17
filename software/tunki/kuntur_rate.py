@@ -1,5 +1,5 @@
 """
-kuntur_rate.py — the per-channel sample rate the pc-app works with, set by
+kuntur_rate.py — the per-channel sample rate Tunki works with, set by
 the operator (PLAN.md R7, docs/interfaces/recording-format.md §3a.1).
 
 Kuntur runs at one of two rates, chosen by the bitstream (#6,
@@ -7,7 +7,7 @@ docs/releases.md): 25,000 S/s (variants 2/3, clk 37.95 MHz) and 28,000
 (variant 1, clk 42.504 MHz). The 45.54 MHz impl_1 build (30 kS/s) stays
 selectable as "legacy" until it is retired (§3a.5 D1).
 
-One value replaces every rate constant the pc-app used to hard-code:
+One value replaces every rate constant Tunki used to hard-code:
 sample spacing inside a packet (packet_parser.parse), the reader's
 monotonicity clamp, ChannelHealthMonitor's dead-run length, GraphWidget's
 window, and the sidecar's sample_rate.channel_hz/source.
@@ -42,5 +42,5 @@ BY_KEY = {r.key: r for r in RATES}
 
 def from_key(key) -> "KunturRate | None":
     """The rate stored under key, or None (nothing chosen yet, or a key
-    from a build of the pc-app that offered a rate this one does not)."""
+    from a build of Tunki that offered a rate this one does not)."""
     return BY_KEY.get(key) if isinstance(key, str) else None
