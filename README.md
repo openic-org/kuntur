@@ -37,7 +37,7 @@ firmware/
   ble-usb-bridge/           NUCLEO-WB09KE BLE central → USB serial bridge (Makefile)
 software/
   tunki/                    PyQt6 desktop app: live display, recording, analysis
-tools/                      (reserved)
+tools/                      analysis and validation tools (for now in software/tunki/)
 ```
 
 ## Building
@@ -51,10 +51,10 @@ python main.py
 ```
 
 **Firmware** needs the Arm GNU toolchain shipped with STM32CubeIDE and the
-STM32Cube WB0 firmware package. Both projects currently locate that package
-through absolute paths set by STM32CubeIDE (headstage) or at the top of the
-`Makefile` (bridge, `CUBE_DRV_ROOT` / `CUBE_MW_ROOT`); adjust them to your
-install. Making these paths portable is planned.
+STM32Cube WB0 firmware packages (V1.4.0, and V1.4.1 for the bridge), found by
+default under `~/STM32Cube/Repository`, where STM32CubeIDE installs them. For
+another location, set `STM32CUBE_REPO` (bridge) or `STM32CUBE_FW_WB0` (headstage,
+see `firmware/headstage/makefile.init`) on the `make` command line.
 
 ```bash
 cd firmware/headstage/Debug && make all -j8     # → kuntur-mcu.elf / .hex
