@@ -137,6 +137,12 @@
 //	    counts exactly: one that never counted would otherwise pass. No step
 //	    is then error-free, so cdr must give up after one turn; part 4 is
 //	    skipped. A cnt byte is used because the dout/pos check skips it.
+//	  +notch=<a>:<b>: the same flip in every 2nd block (every block would
+//	    only offset cnt by 128 and pass the checker) while the receive PLL
+//	    model is at a step in a..b (circular, absolute). Splits one eye so
+//	    the other, wrapping one is the longest: the only way the eye-centre
+//	    wrap (center >= STEPS) is exercised, since with two equal eyes cdr
+//	    keeps the first, non-wrapping one (strict >). Added 2026-11-17 (#6b).
 //	  Define: +define+CHK_N=<blocks> (default 20) for cdr's N.
 //	  Define: +define+MUT5=<k>, tb mutants that part 5 must catch:
 //	    1 ECLKSYNC ignores STOP; 2 cdr reset by rstb only (not READY);
@@ -157,15 +163,20 @@
 //	    iverilog -g2012 -grelative-include -s cdr_tb -o cdr.vvp cdr_tb.sv /tmp/cdr_rtl.v
 //	    vvp cdr.vvp
 //
-//	Accepted when both are ALL PASS:
+//	Accepted when all three are ALL PASS:
 //	    vvp cdr.vvp +n=20
 //	    vvp cdr.vvp +n=20 +inj=4
+//	    vvp cdr.vvp +n=20 +notch=200:230	(locks at the wrapping eye, step 50)
 //	and each +define+MUT5=1, 2, 3 build must FAIL in part 5 (2026-10-29:
 //	4, 6 and 13 failures; MUT5=3 runs to the timeout, a few minutes), and
-//	each +define+MUT6=1..4 build in part 6.
-//	Expected with the defaults: two error-free runs about 140 steps apart,
-//	each about 128 steps wide. With +q7first no step locks, because 01 80
-//	arrives as 80 01; the tb then reports FAIL (§6.6, bit order).
+//	each +define+MUT6=1..4 build in part 6. RTL mutant: the eye-centre wrap
+//	left at a stale count (9'd280 for STEPS) must FAIL with +notch=200:230
+//	(2026-11-17: 9 failures, locks at 106); it passes the other two runs.
+//	Expected with the defaults (37.95 MHz, 336 steps of 78.4 ps): two
+//	error-free runs 168 steps apart, each 156 steps wide (centres 50 and
+//	218). At 45.54 MHz / 280 steps (before 2026-11-17): about 140 apart,
+//	128 wide. With +q7first no step locks, because 01 80 arrives as 80 01;
+//	the tb then reports FAIL (§6.6, bit order).
 
 `timescale 1ns/1ps
 `include "../../../../headstage/source/impl_1/kuntur_fpga.v"
@@ -267,12 +278,15 @@ endmodule
 
 
 module cdr_tb();
-	// Link timing, ps. clk = 45.539955 MHz (pll0 CLKOP before the A.7 retune).
-	localparam real T_PS  = 1.0e6 / 45.539955;	// ECLK period, 21958.7 ps
+	// Link timing, ps. clk = 37.949963 MHz (Kuntur pll_25k CLKOP, the 25k
+	// tunnel rate; #6b). Before 2026-11-17: 45.539955 MHz, 280 steps.
+	localparam real T_PS  = 1.0e6 / 37.949963;	// ECLK period, 26350.5 ps
 	localparam real UI_PS = T_PS / 2.0;		// one bit, DDR
-	localparam integer STEPS = 280;			// 8 × (DIVOS_ACTUAL_STR + 1), §6.4
+	localparam integer STEPS = 336;			// 8 × (DIVOS_ACTUAL_STR + 1) = 8 × 42, §6.4
 
 	integer n_blocks, seed, inj;
+	integer notch_a = -1, notch_b = -1;		// +notch=a:b, -1 = off
+	reg [8*16-1:0] notch_s;
 	real d_data, d_clk, ins, jit, win;
 	reg  q7first;
 
@@ -315,7 +329,7 @@ module cdr_tb();
 		ph      <= ph + 3'd1;
 		tx_wclk <= (ph + 3'd1) >= 3'd4;
 		if (ph == 3'd7)		// dout is registered: cnt0 == 5 means it holds cnt[7:0]
-			txb <= dout ^ ((inj > 0 && tx_gen.cnt0 == 3'd5 && tx_gen.cnt1 % inj == 0) ? 8'h80 : 8'h00);
+			txb <= dout ^ (((inj > 0 && tx_gen.cnt1 % inj == 0) || (in_notch && tx_gen.cnt1 % 2 == 0)) && tx_gen.cnt0 == 3'd5 ? 8'h80 : 8'h00);
 		tx_bit  <= (ph == 3'd7) ? dout[0] : txb[ph + 3'd1];
 	end
 
@@ -335,6 +349,10 @@ module cdr_tb();
 
 	// ---- PLL model: rx_eclk = clk_line delayed by ins + phase ----
 	integer step = 0;
+	// 1 while the receive PLL model sits at a step in the notch a..b (circular)
+	wire in_notch = (notch_a >= 0) &&
+		((notch_a <= notch_b) ? (step >= notch_a && step <= notch_b)
+		                      : (step >= notch_a || step <= notch_b));
 	reg rx_eclk = 0;
 	always @(clk_line)
 		rx_eclk <= #((ins + step * T_PS / STEPS) / 1000.0) clk_line;
@@ -1050,6 +1068,11 @@ module cdr_tb();
 		if (!$value$plusargs("seed=%d", seed)) seed = 1;
 		if (!$value$plusargs("inj=%d", inj)) inj = 0;
 		if (!$value$plusargs("start=%d", start_step)) start_step = 0;
+		if ($value$plusargs("notch=%s", notch_s))
+			if ($sscanf(notch_s, "%d:%d", notch_a, notch_b) != 2 || notch_a < 0 || notch_a >= STEPS || notch_b < 0 || notch_b >= STEPS) begin
+				$display("cdr_tb: +notch=%0d:%0d out of 0..%0d", notch_a, notch_b, STEPS - 1);
+				$finish;
+			end
 		ref_base = (inj > 0) ? n_blocks / inj : 0;
 		chk_base = (inj > 0) ? CHK_N / inj : 0;
 		if (inj > 0 && (n_blocks % inj != 0 || CHK_N % inj != 0)) begin
@@ -1066,6 +1089,8 @@ module cdr_tb();
 			d_data, d_clk, ins, jit, win);
 		if (inj > 0)
 			$display("  injecting 1 bit error every %0d blocks: base %0d (rx_ref), %0d (cdr) subtracted", inj, ref_base, chk_base);
+		if (notch_a >= 0)
+			$display("  notch: 1 bit error in every 2nd block while the receive PLL is at steps %0d..%0d", notch_a, notch_b);
 
 		#500 rstb = 1;
 		#2000;

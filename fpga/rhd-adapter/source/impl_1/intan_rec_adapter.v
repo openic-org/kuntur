@@ -128,13 +128,16 @@ module intan_rec_adapter (
 	//assign pll_phasestep = 1'b1;
 	
 	
+	// PLL values
+	// FVCO = 1593.9; DIVOS_ACTUAL_STR = "41"; CLKOS_FREQ_ACTUAL = 37.95;
+	
 	pll0 pllcdr (
-		.clki_i	(kuntur_clk),
-		.phasedir_i	(pll_phasedir), // '0'=delayed (lagging); '1'=advanced (leading)
-		.phasestep_i	(pll_phasestep), // active on falling edge. Each pulse signal changes the phase by phasemin.
-										 // Output clock phase change per step = [1/(8 × (DIVO<n>_ACTUAL_STR + 1))] × 360°
-										 // DIV0S_ACTUAL_STR = "34" -> phase_step ~ 1.28 deg
-										 // Full turn (360 deg) = 280 steps
+		.clki_i	(kuntur_clk),			// 37.95 MHz
+		.phasedir_i	(pll_phasedir), 	// '0'=delayed (lagging); '1'=advanced (leading)
+		.phasestep_i	(pll_phasestep),	// active on falling edge. Each pulse signal changes the phase by phasemin.
+										// Output clock phase change per step = [1/(8 × (DIVO<n>_ACTUAL_STR + 1))] × 360°
+										// DIV0S_ACTUAL_STR = "41" -> phase_step ~ 1.071 deg
+										// Full turn (360 deg) = 336 steps
 		.phaseloadreg_i	(1'b0),
 		.phasesel_i	(3'b001), // 3-bit input: Select the PLL oputput that can be shifted. '001'=CLKOS
 		.clkop_o	(kuntur_clk_0),
@@ -663,7 +666,8 @@ module cdr (
 );
 	
 	// parameters
-	localparam PHASE_MAX = 9'd279;
+	localparam STEPS = 9'd336;
+	localparam PHASE_MAX = STEPS-1;
 
 	
 	// wire & reg
@@ -803,8 +807,8 @@ module cdr (
 		if (!rstb || meas_rst)
 			eye_center <= 9'd0;
 		else if (center_en)
-			if (center >= 280)
-				eye_center <= center - 9'd280;
+			if (center >= STEPS)
+				eye_center <= center - STEPS;
 			else
 				eye_center <= center;
 			
