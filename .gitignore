@@ -59,6 +59,8 @@ firmware/headstage/Debug/**
 !firmware/headstage/Debug/**/*.mk
 !firmware/headstage/Debug/objects.list
 firmware/headstage/.metadata
+# CDT indexer cache, rewritten by every STM32CubeIDE session
+firmware/headstage/.settings/language.settings.xml
 firmware/headstage/tests/test_fpga_spi
 
 # ── FPGA (Lattice Radiant) ───────────────────────────────────────────────────
