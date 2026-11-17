@@ -79,6 +79,9 @@ fpga/*/.recovery
 fpga/*/dliteTcl.tcl
 fpga/*/groupcolor.ini
 fpga/*/regioncolor.ini
+# Radiant Tcl console transcript and its recovery dir, written on project open
+fpga/*/*_tcl.html
+fpga/*/*_tcr.dir/
 fpga/*/tb_rtl/*.wlf
 fpga/*/tb_rtl/qrun.out/
 fpga/*/tb_rtl/work/
