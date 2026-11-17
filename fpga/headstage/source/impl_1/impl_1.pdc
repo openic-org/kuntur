@@ -1,0 +1,89 @@
+ldc_set_vcc -bank 3 1.8
+ldc_set_port -iobuf {IO_TYPE=LVCMOS18 DRIVE=NA CLAMP=ON SLEWRATE=NA PULLMODE=UP} [get_ports rstb]
+ldc_set_port -iobuf {IO_TYPE=LVCMOS18H DRIVE=NA PULLMODE=NONE SLEWRATE=NA} [get_ports clkin]
+ldc_set_port -iobuf {IO_TYPE=LVCMOS18H DRIVE=NA PULLMODE=NONE SLEWRATE=NA} [get_ports spi0_csb]
+ldc_set_port -iobuf {IO_TYPE=LVCMOS18 DRIVE=NA CLAMP=ON PULLMODE=NONE SLEWRATE=NA} [get_ports spi0_sck]
+ldc_set_port -iobuf {IO_TYPE=LVCMOS18 DRIVE=NA CLAMP=ON PULLMODE=NONE SLEWRATE=NA} [get_ports spi0_mosi]
+ldc_set_port -iobuf {IO_TYPE=LVCMOS18 DRIVE=8 GLITCHFILTER=OFF HYSTERESIS=NA PULLMODE=NONE SLEWRATE=MED} [get_ports spi0_miso]
+ldc_set_port -iobuf {DRIVE=8 GLITCHFILTER=OFF HYSTERESIS=NA PULLMODE=NONE SLEWRATE=MED IO_TYPE=LVCMOS18} [get_ports cmd_is_00]
+ldc_set_location -site {G8} [get_ports clkin]
+ldc_set_location -site {F8} [get_ports spi0_csb]
+ldc_set_location -site {E2} [get_ports spi0_miso]
+ldc_set_location -site {E3} [get_ports rstb]
+ldc_set_location -site {D1} [get_ports cmd_is_00]
+ldc_set_location -site {B2} [get_ports spi0_sck]
+ldc_set_location -site {B3} [get_ports spi0_mosi]
+ldc_set_location -site {H1} [get_ports spi1_csb]
+ldc_set_location -site {E4} [get_ports spi1_mosi]
+ldc_set_location -site {H2} [get_ports spi1_sck]
+ldc_set_location -site {E5} [get_ports spi2_mosi0]
+ldc_set_port -iobuf {IO_TYPE=LVCMOS18H} [get_ports spi0_csb]
+ldc_set_port -iobuf {IO_TYPE=LVCMOS18} [get_ports spi0_mosi]
+ldc_set_port -iobuf {IO_TYPE=LVCMOS18} [get_ports spi0_sck]
+ldc_set_port -iobuf {IO_TYPE=LVCMOS18} [get_ports spi0_miso]
+ldc_set_location -site {G9} [get_ports tun_data]
+ldc_set_location -site {G3} [get_ports spi1_miso0]
+ldc_set_port -iobuf {IO_TYPE=LVDS DIFFRESISTOR=100} [get_ports spi1_miso0]
+ldc_set_location -site {G4} [get_ports spi1_miso1]
+ldc_set_port -iobuf {IO_TYPE=LVDS DIFFRESISTOR=100} [get_ports spi1_miso1]
+ldc_set_location -site {F7} [get_ports spi2_sck]
+ldc_set_location -site {E9} [get_ports tun_clk]
+ldc_set_port -iobuf {IO_TYPE=LVDS} [get_ports spi1_csb]
+ldc_set_port -iobuf {IO_TYPE=LVDS} [get_ports spi1_mosi]
+ldc_set_port -iobuf {IO_TYPE=LVDS} [get_ports spi1_sck]
+ldc_set_location -site {G5} [get_ports spi2_csb]
+ldc_set_port -iobuf {IO_TYPE=LVDS} [get_ports spi2_csb]
+ldc_set_port -iobuf {IO_TYPE=LVDS} [get_ports spi2_mosi0]
+ldc_set_port -iobuf {IO_TYPE=LVDS} [get_ports spi2_sck]
+ldc_set_port -iobuf {IO_TYPE=LVDS} [get_ports tun_clk]
+ldc_set_port -iobuf {IO_TYPE=LVDS} [get_ports tun_data]
+# ---------------------------------------------------------------------------
+# clk -> wclk: the tunnel's clock crossing (lvds-tunnel.md §4.8), cut.
+#
+# Here and not in impl_1.sdc: wclk is not created by us. Radiant derives
+# it after synthesis from ECLKDIV (create_generated_clock -name {wclk}
+# ... -divide_by 4, see the .twr section 1.1), so a get_clocks wclk in the
+# .sdc is dropped at synthesis ("No clock matched"; the companion's .srp
+# shows exactly that for its own wclk).
+#
+# wclk is clk/4 from the same PLL, so STA would time clk -> wclk as a
+# synchronous path. The RTL does not rely on it: everything that crosses
+# (capture_buffer: rbank, frame_index, alt_cmd, alt_answer; tun_aux:
+# flags_snap, send_config, send_status, shadow_snap via cfg_byte) is
+# written once per sampling period, at the announcement, and read by
+# frame_builder only after frame_rdy has passed its 2-flop synchroniser,
+# >= 1 wclk (~105 ns at 25 kSPS) later; it is then stable for the rest of
+# the period. frame_rdy is the synchroniser's input. wbank (EBR) is
+# written on clk and read on wclk, never the same bank at once.
+#
+# One direction only. wclk -> clk stays timed: it is not part of this
+# handshake, and ODDRX4's gearing between wclk and eclk (clk through
+# ECLKSYNC) is a real synchronous relationship.
+# ---------------------------------------------------------------------------
+set_false_path -from [get_clocks clk] -to [get_clocks wclk]
+
+# ---------------------------------------------------------------------------
+# clk -> clk_tx: the #6a MOSI register (spi1-mosi-eye-scan.md §3.1, O2).
+#
+# clk_tx's phase moves at run time, so STA cannot time this crossing at
+# the phase in use; by default it times it as at phase 0 (a full period
+# from clk rising, T/2 from clk falling), far looser than what the scan
+# relies on. The scan allows only phases where the clk_tx edge comes at
+# least T/4 after the source changes, so every source (m_early,
+# combinational after clk rising: regbank EBR -> txsr's load mux -> the
+# source mux; m0; and the clk-falling copies) must settle within
+# T/4 - 1 ns of its own launch edge.
+#
+# Here and not in the .sdc: the register's name only exists after
+# synthesis. In the .sdc, LSE cannot resolve it (13 warnings) and map
+# then times it from its own copy; here the RTL name (get_cells
+# scan0/mosi_tx) and the cell name (scan0/mosi_tx_c) are both dropped by
+# map with only a map warning, which looks like a clean build. Only the
+# pin form below is applied: check for its "Path Exception" in the .twr
+# (build_kuntur.py does) after any change that could rename it.
+#
+# One .pdc for all three builds, so one value: T/4 - 1 at 28k
+# (23.527 ns -> 4.881 ns). At 25k it is 5.587 ns; 4.881 is 0.71 ns
+# tighter than needed there.
+# ---------------------------------------------------------------------------
+set_max_delay -from [get_clocks clk] -to [get_pins {scan0/mosi_tx_c.ff_inst/DF}] 4.881

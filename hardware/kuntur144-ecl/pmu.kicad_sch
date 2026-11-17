@@ -1,0 +1,3751 @@
+(kicad_sch
+	(version 20231120)
+	(generator "eeschema")
+	(generator_version "8.0")
+	(uuid "2c0bd1ea-1496-4cb3-9494-fc3933130996")
+	(paper "A4")
+	(lib_symbols
+		(symbol "Device:C"
+			(pin_numbers hide)
+			(pin_names
+				(offset 0.254)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "C"
+				(at 0.635 2.54 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Value" "C"
+				(at 0.635 -2.54 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Footprint" ""
+				(at 0.9652 -3.81 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Unpolarized capacitor"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "cap capacitor"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "C_*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "C_0_1"
+				(polyline
+					(pts
+						(xy -2.032 -0.762) (xy 2.032 -0.762)
+					)
+					(stroke
+						(width 0.508)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -2.032 0.762) (xy 2.032 0.762)
+					)
+					(stroke
+						(width 0.508)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "C_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 2.794)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 2.794)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+		)
+		(symbol "Device:L"
+			(pin_numbers hide)
+			(pin_names
+				(offset 1.016) hide)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "L"
+				(at -1.27 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "L"
+				(at 1.905 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Inductor"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "inductor choke coil reactor magnetic"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "Choke_* *Coil* Inductor_* L_*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "L_0_1"
+				(arc
+					(start 0 -2.54)
+					(mid 0.6323 -1.905)
+					(end 0 -1.27)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -1.27)
+					(mid 0.6323 -0.635)
+					(end 0 0)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 0)
+					(mid 0.6323 0.635)
+					(end 0 1.27)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 1.27)
+					(mid 0.6323 1.905)
+					(end 0 2.54)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "L_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+		)
+		(symbol "openic:LM3691TL-1.0/NOPB"
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "U"
+				(at -5.08 6.35 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "LM3691TL-1.0/NOPB"
+				(at -2.54 -6.35 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "openic:DSBGA-6-P0.5"
+				(at 0 -8.89 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at -6.35 5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "LM3691TL-1.0/NOPB"
+				(at -6.35 5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "LM3691TL-1.0/NOPB_0_1"
+				(rectangle
+					(start -6.35 5.08)
+					(end 6.35 -5.08)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "LM3691TL-1.0/NOPB_1_1"
+				(pin input line
+					(at -8.89 0 0)
+					(length 2.54)
+					(name "EN"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "A1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at -8.89 2.54 0)
+					(length 2.54)
+					(name "IN"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "A2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at 8.89 -2.54 180)
+					(length 2.54)
+					(name "MODE"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "B1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 8.89 2.54 180)
+					(length 2.54)
+					(name "SW"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "B2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 8.89 0 180)
+					(length 2.54)
+					(name "FB"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "C1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at -8.89 -2.54 0)
+					(length 2.54)
+					(name "GND"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "C2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+		)
+		(symbol "openic:LM3691TL-1.8/NOPB"
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "U"
+				(at -5.08 6.35 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "LM3691TL-1.8/NOPB"
+				(at -2.54 -6.35 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "openic:DSBGA-6-P0.5"
+				(at 0 -8.89 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at -6.35 5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "LM3691TL-1.8/NOPB"
+				(at -6.35 5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "LM3691TL-1.8/NOPB_0_1"
+				(rectangle
+					(start -6.35 5.08)
+					(end 6.35 -5.08)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "LM3691TL-1.8/NOPB_1_1"
+				(pin input line
+					(at -8.89 0 0)
+					(length 2.54)
+					(name "EN"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "A1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at -8.89 2.54 0)
+					(length 2.54)
+					(name "IN"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "A2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at 8.89 -2.54 180)
+					(length 2.54)
+					(name "MODE"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "B1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 8.89 2.54 180)
+					(length 2.54)
+					(name "SW"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "B2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 8.89 0 180)
+					(length 2.54)
+					(name "FB"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "C1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at -8.89 -2.54 0)
+					(length 2.54)
+					(name "GND"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "C2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+		)
+		(symbol "openic:NCP161AFCT180T2G"
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "U"
+				(at -5.08 6.35 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "NCP161AFCT180T2G"
+				(at 7.62 6.35 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "openic:WLCSP-4-P0.35"
+				(at -3.81 -7.62 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at -6.35 5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "LDO Regulator for RF and Analog Circuits - Ultra-Low Noise and High PSRR-450mA"
+				(at -3.81 -7.62 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "NCP161AFCT180T2G_0_1"
+				(rectangle
+					(start -6.35 5.08)
+					(end 6.35 -5.08)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "NCP161AFCT180T2G_1_1"
+				(text "1.8V\n450mA"
+					(at 6.35 -2.54 0)
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+						(justify right)
+					)
+				)
+				(pin power_in line
+					(at -8.89 2.54 0)
+					(length 2.54)
+					(name "IN"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "A1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_out line
+					(at 8.89 2.54 180)
+					(length 2.54)
+					(name "OUT"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "A2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at -8.89 0 0)
+					(length 2.54)
+					(name "EN"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "B1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at -8.89 -2.54 0)
+					(length 2.54)
+					(name "GND"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "B2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+		)
+		(symbol "openic:NCP167AFCT180T2G"
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "U"
+				(at -5.08 6.35 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "NCP167AFCT180T2G"
+				(at 7.62 6.35 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "openic:WLCSP-4-P0.35"
+				(at -3.81 -7.62 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at -6.35 5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "LDO Regulator for RF and Analog Circuits - Ultra-Low Noise and High PSRR-700mA"
+				(at -3.81 -7.62 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "NCP167AFCT180T2G_0_1"
+				(rectangle
+					(start -6.35 5.08)
+					(end 6.35 -5.08)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "NCP167AFCT180T2G_1_1"
+				(text "1.8V\n700mA"
+					(at 6.35 -2.54 0)
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+						(justify right)
+					)
+				)
+				(pin power_in line
+					(at -8.89 2.54 0)
+					(length 2.54)
+					(name "IN"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "A1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_out line
+					(at 8.89 2.54 180)
+					(length 2.54)
+					(name "OUT"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "A2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at -8.89 0 0)
+					(length 2.54)
+					(name "EN"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "B1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at -8.89 -2.54 0)
+					(length 2.54)
+					(name "GND"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "B2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+		)
+		(symbol "openic:TESTPOINT_PAD_SQ_0.5"
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "TP"
+				(at 1.27 2.54 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "openic:TESTPOINT_PAD_SQ_0.5"
+				(at 0 -2.54 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "TESTPOINT_PAD_SQ_0.5"
+				(at 0 -5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "TESTPOINT_PAD_SQ_0.5_0_1"
+				(rectangle
+					(start 0 1.27)
+					(end 3.81 -1.27)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "TESTPOINT_PAD_SQ_0.5_1_1"
+				(pin passive line
+					(at -2.54 0 0)
+					(length 2.54)
+					(name "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+		)
+	)
+	(junction
+		(at 138.43 101.6)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "02383c8f-f221-4c70-b201-eb782e29ce46")
+	)
+	(junction
+		(at 133.35 73.66)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "05f1b55c-bee7-4d1e-a7c1-5d50ea93ed9f")
+	)
+	(junction
+		(at 125.73 132.08)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "12a42e1c-a7a5-42c6-9980-625fca4c45c9")
+	)
+	(junction
+		(at 121.92 132.08)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "19fa1e1e-801e-4be6-afb0-998057ec3841")
+	)
+	(junction
+		(at 96.52 157.48)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "2b2f9fba-cca0-496b-af4b-de19b34797ee")
+	)
+	(junction
+		(at 82.55 87.63)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "2bb064b1-b4af-402b-8c71-9c00c92a7e61")
+	)
+	(junction
+		(at 121.92 157.48)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "30a8c950-fe2c-432f-b203-710a68210e09")
+	)
+	(junction
+		(at 96.52 132.08)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "38f3c874-eba7-4031-9165-80844304f62c")
+	)
+	(junction
+		(at 86.36 73.66)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "3ec005d2-35c9-4349-9a8e-0173787301bf")
+	)
+	(junction
+		(at 96.52 104.14)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "4588e5ab-85b9-44e0-9f76-198fa33288cc")
+	)
+	(junction
+		(at 133.35 101.6)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "4dbe8c11-f425-43e9-b0f6-477db6fa24ec")
+	)
+	(junction
+		(at 128.27 101.6)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "8397a0f3-83c2-48ac-ba33-d9b52a4b052d")
+	)
+	(junction
+		(at 96.52 76.2)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "96a791a7-9b18-45f3-aedf-99caf1f4d0b5")
+	)
+	(junction
+		(at 96.52 73.66)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "b7f28a47-5443-4c5c-b55a-c186d943a2de")
+	)
+	(junction
+		(at 83.82 73.66)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "c7eb5ce8-d729-436b-9623-96540cede9f1")
+	)
+	(junction
+		(at 96.52 101.6)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "cc17e7f8-4c65-4f38-b171-cdf263519843")
+	)
+	(junction
+		(at 138.43 73.66)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "cf561424-f104-41d4-83a5-d9e7fa84f716")
+	)
+	(junction
+		(at 128.27 73.66)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "d954be7a-8cbe-42c8-b440-012d0f8d1932")
+	)
+	(junction
+		(at 125.73 157.48)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "fa3527df-a08c-4dfc-8d1c-d798f7a1bf60")
+	)
+	(wire
+		(pts
+			(xy 121.92 139.7) (xy 121.92 146.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "06292925-c034-4bf2-be38-905b8b2e324c")
+	)
+	(wire
+		(pts
+			(xy 96.52 116.84) (xy 96.52 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "08b2b7f5-e714-4619-9569-d520f449990c")
+	)
+	(wire
+		(pts
+			(xy 116.84 88.9) (xy 96.52 88.9)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0af6ab93-984a-4cd5-8455-023a2037a581")
+	)
+	(wire
+		(pts
+			(xy 138.43 97.79) (xy 138.43 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0e53e17b-754c-4fd6-baef-8c35dc273b38")
+	)
+	(wire
+		(pts
+			(xy 99.06 134.62) (xy 96.52 134.62)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0fb9dbef-c0bf-4a3a-8b2a-baae82e624c7")
+	)
+	(wire
+		(pts
+			(xy 133.35 81.28) (xy 133.35 87.63)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1cd7a208-9949-4830-8404-1ba7803391e2")
+	)
+	(wire
+		(pts
+			(xy 86.36 81.28) (xy 86.36 87.63)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1dc51e2f-bfb4-42b5-82e6-5b2e7965647f")
+	)
+	(wire
+		(pts
+			(xy 80.01 73.66) (xy 83.82 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1df2fc0c-5109-48a8-a702-7c51944cf3fb")
+	)
+	(wire
+		(pts
+			(xy 125.73 128.27) (xy 125.73 132.08)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1fda2cd2-7583-4702-b4b9-ed8da1aa0dd4")
+	)
+	(wire
+		(pts
+			(xy 128.27 101.6) (xy 127 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "21db9b3c-1711-496a-b28a-13c502731ccb")
+	)
+	(wire
+		(pts
+			(xy 96.52 160.02) (xy 96.52 157.48)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "23bf292b-fa3f-4286-89ad-61abd3e649af")
+	)
+	(wire
+		(pts
+			(xy 128.27 76.2) (xy 116.84 76.2)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "27f92878-0737-4d67-b7fc-d4a020e6a45e")
+	)
+	(wire
+		(pts
+			(xy 83.82 68.58) (xy 83.82 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2cbc8f88-96a3-410e-b6bf-aed9f28a48c3")
+	)
+	(wire
+		(pts
+			(xy 82.55 92.71) (xy 82.55 87.63)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "33c69411-35fe-4e2b-b089-c1a81aecec04")
+	)
+	(wire
+		(pts
+			(xy 116.84 73.66) (xy 119.38 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "344eb611-61da-4a4f-b202-326918ded5eb")
+	)
+	(wire
+		(pts
+			(xy 86.36 165.1) (xy 86.36 171.45)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "35347bdc-da7c-4067-a895-9591a6fa1d0e")
+	)
+	(wire
+		(pts
+			(xy 128.27 104.14) (xy 116.84 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "373f692f-00ba-4f33-8ca9-631b91fe9346")
+	)
+	(wire
+		(pts
+			(xy 96.52 157.48) (xy 99.06 157.48)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3b281b13-ce23-4b36-b09a-cb83bfe98173")
+	)
+	(wire
+		(pts
+			(xy 86.36 109.22) (xy 86.36 115.57)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3d892b9d-2357-4a4a-b16d-790ff9d6fc48")
+	)
+	(wire
+		(pts
+			(xy 96.52 101.6) (xy 99.06 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3fbbcb2a-d606-4fce-be33-5135ab7354eb")
+	)
+	(wire
+		(pts
+			(xy 133.35 109.22) (xy 133.35 115.57)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4c11c0b4-3e58-431e-afae-65611270d167")
+	)
+	(wire
+		(pts
+			(xy 127 128.27) (xy 125.73 128.27)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4cfc1a9f-b647-49ee-926e-a12d2af1322a")
+	)
+	(wire
+		(pts
+			(xy 99.06 160.02) (xy 96.52 160.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4d89fdc8-5d85-4389-8572-c16393b93fa8")
+	)
+	(wire
+		(pts
+			(xy 127 153.67) (xy 125.73 153.67)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5121d91d-9621-4a0f-90f4-6de5b7fd1968")
+	)
+	(wire
+		(pts
+			(xy 80.01 87.63) (xy 82.55 87.63)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "52ba4597-c891-4778-9849-532bc1567c20")
+	)
+	(wire
+		(pts
+			(xy 138.43 73.66) (xy 144.78 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "56d13aa3-7065-4139-b3eb-cd1d7aaf5fa8")
+	)
+	(wire
+		(pts
+			(xy 96.52 76.2) (xy 96.52 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5ad2f503-a9fa-4a51-a81e-5973bac51c84")
+	)
+	(wire
+		(pts
+			(xy 128.27 73.66) (xy 128.27 76.2)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "602aceae-3ed8-44ca-b570-c1b9ac9309eb")
+	)
+	(wire
+		(pts
+			(xy 116.84 132.08) (xy 121.92 132.08)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6472e59b-6f7d-465b-a330-fda3bd894481")
+	)
+	(wire
+		(pts
+			(xy 138.43 101.6) (xy 144.78 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6643c623-6eb9-4219-9a5c-1b66a894af52")
+	)
+	(wire
+		(pts
+			(xy 99.06 78.74) (xy 99.06 85.09)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "66c922eb-8540-4790-a81c-87eef85d4303")
+	)
+	(wire
+		(pts
+			(xy 128.27 101.6) (xy 128.27 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "67de3402-b8a8-453e-b673-0695a4709e2c")
+	)
+	(wire
+		(pts
+			(xy 128.27 73.66) (xy 133.35 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "68a5c9b9-993c-45a8-9856-3e645cf700c7")
+	)
+	(wire
+		(pts
+			(xy 86.36 73.66) (xy 96.52 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "68c1a2be-a2bc-44ad-9f19-1dbe37ef3fe3")
+	)
+	(wire
+		(pts
+			(xy 133.35 101.6) (xy 138.43 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6e7cd82b-e446-4fd9-bff1-e05afed8b706")
+	)
+	(wire
+		(pts
+			(xy 99.06 106.68) (xy 99.06 113.03)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6f90c236-9af6-441c-ad08-05d9c6843259")
+	)
+	(wire
+		(pts
+			(xy 99.06 137.16) (xy 99.06 143.51)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7cfa556d-2090-456b-a7b0-aede9f889ae2")
+	)
+	(wire
+		(pts
+			(xy 83.82 73.66) (xy 86.36 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7d4aef72-3cda-421a-a255-00740854c6b3")
+	)
+	(wire
+		(pts
+			(xy 121.92 132.08) (xy 125.73 132.08)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8225d0b5-e053-4f75-887a-185872bc9fe7")
+	)
+	(wire
+		(pts
+			(xy 116.84 101.6) (xy 119.38 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8469988b-3a5b-400c-a080-3a5ebfdf9a14")
+	)
+	(wire
+		(pts
+			(xy 138.43 69.85) (xy 138.43 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8c022d44-a36f-4ec9-a3b7-ce1f5356e122")
+	)
+	(wire
+		(pts
+			(xy 128.27 73.66) (xy 127 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8c316b3a-b39a-4770-afe7-06c940a94cbf")
+	)
+	(wire
+		(pts
+			(xy 85.09 68.58) (xy 83.82 68.58)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8f7c4102-31fc-4f1b-9ea2-d826b22e1dc1")
+	)
+	(wire
+		(pts
+			(xy 125.73 132.08) (xy 132.08 132.08)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9154e4da-9393-483b-a348-91b1a0abb3e0")
+	)
+	(wire
+		(pts
+			(xy 99.06 76.2) (xy 96.52 76.2)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "93852112-71f2-435f-89a8-8efc43642359")
+	)
+	(wire
+		(pts
+			(xy 99.06 104.14) (xy 96.52 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "986c7fa8-b59b-49ed-b830-4a553e4ff060")
+	)
+	(wire
+		(pts
+			(xy 116.84 78.74) (xy 116.84 88.9)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9931bc80-0cda-4f36-9831-cc55f1d9e489")
+	)
+	(wire
+		(pts
+			(xy 96.52 73.66) (xy 99.06 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9b3ef2c5-2828-4c9d-96bd-77d990b0df06")
+	)
+	(wire
+		(pts
+			(xy 86.36 157.48) (xy 96.52 157.48)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9ef486fa-5b62-4272-80a9-61650f756c81")
+	)
+	(wire
+		(pts
+			(xy 116.84 157.48) (xy 121.92 157.48)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a32ac68e-bfa3-4e42-9e20-62b5b058c9bb")
+	)
+	(wire
+		(pts
+			(xy 85.09 92.71) (xy 82.55 92.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a5b83fd3-0998-47f7-9c1d-6aeb39135587")
+	)
+	(wire
+		(pts
+			(xy 121.92 157.48) (xy 125.73 157.48)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a6321cf8-17e5-4604-b9b4-59c9d68882d7")
+	)
+	(wire
+		(pts
+			(xy 128.27 101.6) (xy 133.35 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a884b558-7a1e-4d13-a991-a26889207fe7")
+	)
+	(wire
+		(pts
+			(xy 99.06 162.56) (xy 99.06 168.91)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ae9c2257-51ae-4aec-8a39-a6579112de5d")
+	)
+	(wire
+		(pts
+			(xy 86.36 101.6) (xy 96.52 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b9f8a6cf-590a-4ef4-9dea-3c3ee4a3abc8")
+	)
+	(wire
+		(pts
+			(xy 139.7 97.79) (xy 138.43 97.79)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "bfa19f4a-2b0b-41a6-956b-c3922c5fcd7d")
+	)
+	(wire
+		(pts
+			(xy 86.36 132.08) (xy 96.52 132.08)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c758d1f4-84d3-4e4d-9edb-e48fcb74a517")
+	)
+	(wire
+		(pts
+			(xy 96.52 104.14) (xy 96.52 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d255c335-5168-44ca-9d4a-b4aef8ffd082")
+	)
+	(wire
+		(pts
+			(xy 116.84 106.68) (xy 116.84 116.84)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d61f2c95-e69e-44b6-b632-be78a9685a7e")
+	)
+	(wire
+		(pts
+			(xy 133.35 73.66) (xy 138.43 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d8534518-c90e-41b0-9e18-8eaeadd96172")
+	)
+	(wire
+		(pts
+			(xy 125.73 157.48) (xy 132.08 157.48)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d946bb14-54dd-46d6-a887-e5af0f58f1e1")
+	)
+	(wire
+		(pts
+			(xy 82.55 87.63) (xy 86.36 87.63)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "dae60593-f710-4d7a-aeda-3cd8398d2414")
+	)
+	(wire
+		(pts
+			(xy 96.52 132.08) (xy 99.06 132.08)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "de383579-97e4-4a7e-96c2-463b73988ef0")
+	)
+	(wire
+		(pts
+			(xy 86.36 139.7) (xy 86.36 146.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e2175de8-c89e-4e8c-b7a4-7c0ba76aae49")
+	)
+	(wire
+		(pts
+			(xy 139.7 69.85) (xy 138.43 69.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e424492e-25de-4e67-9520-856bc617334a")
+	)
+	(wire
+		(pts
+			(xy 121.92 165.1) (xy 121.92 171.45)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e59f6fbd-3006-4fdc-8a95-f7a1e264fdfb")
+	)
+	(wire
+		(pts
+			(xy 116.84 116.84) (xy 96.52 116.84)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f577af3c-50b7-4de9-8e56-ecb3b8edea5c")
+	)
+	(wire
+		(pts
+			(xy 96.52 134.62) (xy 96.52 132.08)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "fbfb5c02-3910-4288-9fc9-f43d9e01cf59")
+	)
+	(wire
+		(pts
+			(xy 96.52 88.9) (xy 96.52 76.2)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "fc63e4e7-06f2-42f2-9724-e879217893ec")
+	)
+	(wire
+		(pts
+			(xy 125.73 153.67) (xy 125.73 157.48)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "fd33faf5-2832-4162-8b31-b90ed2527ee1")
+	)
+	(text_box "VCC = 1.0V\nVCCAUX/VCCAUXHx = 1.8V\nVCCIO0/1 = 1.8V\nVCCIO3/5 = 1.8V\nVCCDPHY = Unconnected (not used)\nVCCADPHY = Unconnected (not used)\nVCCPLLDPHY = Unconnected (not used)"
+		(exclude_from_sim no)
+		(at 171.45 72.39 0)
+		(size 52.07 16.51)
+		(stroke
+			(width 0.254)
+			(type solid)
+			(color 0 0 255 1)
+		)
+		(fill
+			(type none)
+		)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "121c6af2-f102-4e4e-b7f6-cba40d5af11f")
+	)
+	(label "GND"
+		(at 86.36 86.36 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "3b2c85dc-f18b-4cf0-bc5c-0f0e9e8c2a8f")
+	)
+	(label "GND"
+		(at 133.35 86.36 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "418cb1d4-6cd4-4c89-9301-dc54a13dee8f")
+	)
+	(label "VCC2"
+		(at 92.71 157.48 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "45fc93ac-3444-441c-9b63-fbd0bd22fefa")
+	)
+	(label "VCC2"
+		(at 92.71 73.66 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "46cfbee9-9b9b-48d0-8f57-77c692bd8c0f")
+	)
+	(label "GND"
+		(at 121.92 144.78 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "6d15afe5-2481-431f-81da-7d9deee3d2e8")
+	)
+	(label "GND"
+		(at 133.35 114.3 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "6f3665ab-ca1e-4aec-8653-479ed3c1c5ae")
+	)
+	(label "GND"
+		(at 99.06 83.82 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "79333fdb-ed58-4e97-b9d5-8bb8a75c7436")
+	)
+	(label "GND"
+		(at 86.36 144.78 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "7f484ccb-f487-4be0-a206-3dfc671fbf54")
+	)
+	(label "GND"
+		(at 99.06 111.76 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "834269f5-20f9-4604-a21d-784e9472a3ec")
+	)
+	(label "VCC2"
+		(at 92.71 101.6 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "b4ea4fe6-a6a5-4d78-9197-9021fdbdb3cf")
+	)
+	(label "GND"
+		(at 99.06 142.24 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "d2d49433-148f-47bf-bdc8-4e6d31fdeafc")
+	)
+	(label "GND"
+		(at 99.06 167.64 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "db2a6cac-c54c-4fc1-86d9-fabe79a95e04")
+	)
+	(label "GND"
+		(at 86.36 170.18 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "e5275f5b-39e9-41fb-8239-e1699ef25fcc")
+	)
+	(label "GND"
+		(at 86.36 114.3 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "f9026175-390b-431f-86df-3a860c5fb9c4")
+	)
+	(label "GND"
+		(at 121.92 170.18 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "fd1dacc8-f4f2-4169-bbfc-1a44a9031104")
+	)
+	(label "VCC2"
+		(at 92.71 132.08 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "fde32b9c-b30d-463a-8b5a-3775594c418f")
+	)
+	(hierarchical_label "MCUBLE_VDD_V1P8"
+		(shape bidirectional)
+		(at 132.08 157.48 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "0814d13c-7bbc-42fa-b729-a4c11df40136")
+	)
+	(hierarchical_label "FPGA_VCC_V1P0"
+		(shape bidirectional)
+		(at 144.78 73.66 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "e1e64266-5410-47f1-896b-9687861efa70")
+	)
+	(hierarchical_label "FPGA_VCCIO_V1P8"
+		(shape bidirectional)
+		(at 144.78 101.6 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "e92a77b0-cd44-42db-ae4e-4dca661d1fa2")
+	)
+	(hierarchical_label "FPGA_VCCAUX_V1P8"
+		(shape bidirectional)
+		(at 132.08 132.08 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "ed45fd62-2cf8-49a3-a615-85baab7d18e2")
+	)
+	(hierarchical_label "VCC2"
+		(shape bidirectional)
+		(at 80.01 73.66 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "eefe3879-2cc3-4a3d-b1ec-e2c9606bcb19")
+	)
+	(hierarchical_label "GND"
+		(shape bidirectional)
+		(at 80.01 87.63 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "f055ebf6-f2b2-444a-957d-9e14dc222fb3")
+	)
+	(symbol
+		(lib_id "openic:TESTPOINT_PAD_SQ_0.5")
+		(at 129.54 128.27 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp yes)
+		(uuid "07a46428-f894-4557-9b84-0295a895c233")
+		(property "Reference" "TP8"
+			(at 134.62 127.6349 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "~"
+			(at 134.62 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "openic:TESTPOINT_PAD_SQ_0.5"
+			(at 129.54 130.81 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 129.54 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "TESTPOINT_PAD_SQ_0.5"
+			(at 129.54 133.35 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "d3ad1bf1-38fd-4e28-9e23-91f4afe3665a")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "TP8")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "openic:LM3691TL-1.8/NOPB")
+		(at 107.95 104.14 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "26cf1f5d-1154-446f-a66a-7eb75b81828e")
+		(property "Reference" "U7"
+			(at 107.95 93.98 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "LM3691TL-1.8/NOPB"
+			(at 107.95 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "openic:DSBGA-6-P0.5"
+			(at 107.95 113.03 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 101.6 99.06 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "LM3691TL-1.8/NOPB"
+			(at 101.6 99.06 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "LM3691TL-1.8/NOPB"
+			(at 107.95 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "TI"
+			(at 107.95 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "B1"
+			(uuid "1f709695-f6e2-4dcc-a613-9a1ea77c2871")
+		)
+		(pin "A1"
+			(uuid "36850b18-d230-4c40-9442-0341d9e06d74")
+		)
+		(pin "B2"
+			(uuid "827938da-bb37-453f-b1a6-ae5cb899ef94")
+		)
+		(pin "A2"
+			(uuid "05a63b15-5cc9-4bc5-98f2-e7e7987d76d8")
+		)
+		(pin "C1"
+			(uuid "27158c82-0511-40b0-a4e7-cc55ce70d4aa")
+		)
+		(pin "C2"
+			(uuid "56f8fcc9-4e20-400b-8637-ce7f9317c9b6")
+		)
+		(instances
+			(project ""
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "U7")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "openic:TESTPOINT_PAD_SQ_0.5")
+		(at 142.24 69.85 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp yes)
+		(fields_autoplaced yes)
+		(uuid "300ccb08-6c2a-472d-96df-b8990c94e1fb")
+		(property "Reference" "TP6"
+			(at 147.32 69.2149 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "~"
+			(at 147.32 71.12 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "openic:TESTPOINT_PAD_SQ_0.5"
+			(at 142.24 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 142.24 69.85 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "TESTPOINT_PAD_SQ_0.5"
+			(at 142.24 74.93 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "ebb3fe60-36f2-4266-9a0e-cbce41c931b2")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "TP6")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 86.36 135.89 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "465d0460-66cb-4be6-8599-8e0cbf19073c")
+		(property "Reference" "C20"
+			(at 90.17 134.6199 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1u"
+			(at 90.17 137.1599 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+			(at 87.3252 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 86.36 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 86.36 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "GRM033R61C105ME15D"
+			(at 86.36 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Murata Electronics"
+			(at 86.36 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "e29deb82-29a3-4e87-a3c7-406a3a1863d6")
+		)
+		(pin "2"
+			(uuid "479adaab-3f14-4ce1-a480-67814bc3701a")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "C20")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "openic:NCP167AFCT180T2G")
+		(at 107.95 160.02 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "5c23e315-edac-4e87-bbce-4cab345261b7")
+		(property "Reference" "U9"
+			(at 107.95 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "NCP167AFCT180T2G"
+			(at 107.95 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "openic:WLCSP-4-P0.35"
+			(at 104.14 167.64 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 101.6 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "LDO Regulator for RF and Analog Circuits - Ultra-Low Noise and High PSRR-700mA"
+			(at 104.14 167.64 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "NCP167AFCT180T2G"
+			(at 107.95 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "OnSemi"
+			(at 107.95 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "B1"
+			(uuid "8eb611ee-ae72-478b-9101-4faf91916f5c")
+		)
+		(pin "A1"
+			(uuid "54471d6c-4830-4eed-9e2f-4681e16f24aa")
+		)
+		(pin "B2"
+			(uuid "5b322cd1-5ee6-4450-99fe-568db0b5ff8c")
+		)
+		(pin "A2"
+			(uuid "b9a0cd0f-0443-4c5b-952b-6ef1732e2309")
+		)
+		(instances
+			(project ""
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "U9")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 86.36 161.29 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "5c96a9a8-5868-4ba8-8092-eefc2fa10090")
+		(property "Reference" "C22"
+			(at 90.17 160.0199 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1u"
+			(at 90.17 162.5599 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+			(at 87.3252 165.1 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 86.36 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 86.36 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "GRM033R61C105ME15D"
+			(at 86.36 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Murata Electronics"
+			(at 86.36 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "f7b5c71f-38b3-4cb7-81fe-c8b267df696c")
+		)
+		(pin "2"
+			(uuid "cda4ba7d-ee85-4a5c-93f7-429ad3acf073")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "C22")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:L")
+		(at 123.19 73.66 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "5d16de90-d112-43d2-a31b-83278b9def2d")
+		(property "Reference" "L2"
+			(at 123.19 68.58 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "1u"
+			(at 123.19 71.12 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "openic:SMD_L_0805_1UH_MLZ2012"
+			(at 123.19 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 123.19 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Inductor"
+			(at 123.19 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "MLZ2012A1R0WT000"
+			(at 123.19 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 123.19 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "abfc66e5-355a-4b17-9d2a-934f8a3230ca")
+		)
+		(pin "2"
+			(uuid "bd25efb6-f222-455c-8db0-75f6be4b5c4c")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "L2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 133.35 77.47 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "71347233-df2e-4327-bfa8-d4831ea34ebb")
+		(property "Reference" "C17"
+			(at 137.16 76.1999 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "4.7u"
+			(at 137.16 78.7399 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+			(at 134.3152 81.28 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 133.35 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 133.35 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "KGM05CR51C475MH"
+			(at 133.35 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Kyocera AVX"
+			(at 133.35 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "d2b194a4-9325-434e-a336-5ec542caabd3")
+		)
+		(pin "2"
+			(uuid "ec54351b-6437-4338-bbca-721b93076f50")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "C17")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 133.35 105.41 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "71c8bbdb-2cd5-432a-bc5d-164cc782ce3a")
+		(property "Reference" "C19"
+			(at 137.16 104.1399 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "4.7u"
+			(at 137.16 106.6799 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+			(at 134.3152 109.22 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 133.35 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 133.35 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "KGM05CR51C475MH"
+			(at 133.35 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Kyocera AVX"
+			(at 133.35 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "6eb68a82-f406-4fb0-8de3-965b122ae262")
+		)
+		(pin "2"
+			(uuid "3eba335a-3050-4250-97de-f5b51f1fe7db")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "C19")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:L")
+		(at 123.19 101.6 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "74e54fee-c697-41eb-b2c1-058803f1ee3e")
+		(property "Reference" "L3"
+			(at 123.19 96.52 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "1u"
+			(at 123.19 99.06 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "openic:SMD_L_0805_1UH_MLZ2012"
+			(at 123.19 101.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 123.19 101.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Inductor"
+			(at 123.19 101.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "MLZ2012A1R0WT000"
+			(at 123.19 101.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "TDK"
+			(at 123.19 101.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "8937aee3-98bb-4b33-bed6-a46c1822f43a")
+		)
+		(pin "2"
+			(uuid "6e864032-4381-48f3-a600-8481019ccaa5")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "L3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 86.36 77.47 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "7b1d2cd1-bec5-46d9-a88b-902cde035a60")
+		(property "Reference" "C16"
+			(at 90.17 76.1999 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "4.7u"
+			(at 90.17 78.7399 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+			(at 87.3252 81.28 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 86.36 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 86.36 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "KGM05CR51C475MH"
+			(at 86.36 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Kyocera AVX"
+			(at 86.36 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "541f8110-689d-4652-b284-8554d1ea437c")
+		)
+		(pin "2"
+			(uuid "d6f587bc-7ad8-440e-b981-6e03196747fe")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "C16")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 121.92 135.89 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "7b6bf02e-a3f7-4e49-81a5-d4d2a68a51c6")
+		(property "Reference" "C21"
+			(at 125.73 134.6199 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1u"
+			(at 125.73 137.1599 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+			(at 122.8852 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 121.92 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 121.92 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "GRM033R61C105ME15D"
+			(at 121.92 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Murata Electronics"
+			(at 121.92 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "c8fbb4a4-614f-4d94-b66f-0ffa6932c374")
+		)
+		(pin "2"
+			(uuid "83927dd8-8715-4e2a-a437-4c50b164e328")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "C21")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 86.36 105.41 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "9552bac9-cc13-4b7e-97d6-ca37ef5fa495")
+		(property "Reference" "C18"
+			(at 90.17 104.1399 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "4.7u"
+			(at 90.17 106.6799 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+			(at 87.3252 109.22 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 86.36 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 86.36 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "KGM05CR51C475MH"
+			(at 86.36 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Kyocera AVX"
+			(at 86.36 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "f2cf6f78-ecc1-4720-be8c-9ba5169aa2cd")
+		)
+		(pin "2"
+			(uuid "6529254f-7b6e-44e4-8d3f-b093846d4e00")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "C18")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "openic:TESTPOINT_PAD_SQ_0.5")
+		(at 87.63 68.58 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp yes)
+		(fields_autoplaced yes)
+		(uuid "a7058795-d8e3-48e5-b253-b4baad5ef1ec")
+		(property "Reference" "TP10"
+			(at 92.71 67.9449 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "~"
+			(at 92.71 69.85 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "openic:TESTPOINT_PAD_SQ_0.5"
+			(at 87.63 71.12 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 87.63 68.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "TESTPOINT_PAD_SQ_0.5"
+			(at 87.63 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "f3feb27c-4389-4660-9726-2ea2ce7a539c")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "TP10")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "openic:NCP161AFCT180T2G")
+		(at 107.95 134.62 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "b6a5b401-0483-437d-9daf-1317cbb1b6b5")
+		(property "Reference" "U8"
+			(at 107.95 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "NCP161AFCT180T2G"
+			(at 107.95 127 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "openic:WLCSP-4-P0.35"
+			(at 104.14 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 101.6 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "LDO Regulator for RF and Analog Circuits - Ultra-Low Noise and High PSRR-450mA"
+			(at 104.14 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "NCP161AFCT180T2G"
+			(at 107.95 134.62 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "OnSemi"
+			(at 107.95 134.62 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "A1"
+			(uuid "ae3cd466-a1d8-42b1-9a97-c955f1dfe9f2")
+		)
+		(pin "B2"
+			(uuid "bcd1c921-3315-47a0-8c70-eceb05636014")
+		)
+		(pin "B1"
+			(uuid "026228ab-3091-4735-ad95-f9686da65e0f")
+		)
+		(pin "A2"
+			(uuid "c710bf22-4551-498d-a44f-d8c0bb6b4596")
+		)
+		(instances
+			(project ""
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "U8")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "openic:TESTPOINT_PAD_SQ_0.5")
+		(at 142.24 97.79 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp yes)
+		(fields_autoplaced yes)
+		(uuid "d5a89786-52ac-4136-875c-b39e3900cc1a")
+		(property "Reference" "TP7"
+			(at 147.32 97.1549 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "~"
+			(at 147.32 99.06 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "openic:TESTPOINT_PAD_SQ_0.5"
+			(at 142.24 100.33 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 142.24 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "TESTPOINT_PAD_SQ_0.5"
+			(at 142.24 102.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "aea7e862-10b9-429d-a930-1ecfb2ad3633")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "TP7")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 121.92 161.29 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "d685454b-7feb-4728-8818-0de48a7c6fd1")
+		(property "Reference" "C23"
+			(at 125.73 160.0199 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1u"
+			(at 125.73 162.5599 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0201_0603Metric"
+			(at 122.8852 165.1 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 121.92 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 121.92 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "GRM033R61C105ME15D"
+			(at 121.92 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Murata Electronics"
+			(at 121.92 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "5c044601-3406-43c9-b74f-4c0b5ef86e30")
+		)
+		(pin "2"
+			(uuid "1efcb00f-fb81-4661-88fe-1dae82ba80b3")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "C23")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "openic:TESTPOINT_PAD_SQ_0.5")
+		(at 129.54 153.67 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp yes)
+		(uuid "e1c4fbb7-4986-424a-b5ed-ab15a808fb26")
+		(property "Reference" "TP9"
+			(at 134.62 153.0349 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "~"
+			(at 134.62 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "openic:TESTPOINT_PAD_SQ_0.5"
+			(at 129.54 156.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 129.54 153.67 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "TESTPOINT_PAD_SQ_0.5"
+			(at 129.54 158.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "25bece03-f168-49d8-b0a1-d2d6f40b3ce6")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "TP9")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "openic:TESTPOINT_PAD_SQ_0.5")
+		(at 87.63 92.71 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp yes)
+		(fields_autoplaced yes)
+		(uuid "fc2cace5-d75b-4c02-bdcf-e6d54b9fb28d")
+		(property "Reference" "TP11"
+			(at 92.71 92.0749 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "~"
+			(at 92.71 93.98 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "openic:TESTPOINT_PAD_SQ_0.5"
+			(at 87.63 95.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 87.63 92.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "TESTPOINT_PAD_SQ_0.5"
+			(at 87.63 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "1595ade0-0c27-474e-9d38-c15791046ef6")
+		)
+		(instances
+			(project "chimu_fpga_ble_v1"
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "TP11")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "openic:LM3691TL-1.0/NOPB")
+		(at 107.95 76.2 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "fc8bed25-efcd-481b-bd31-3f324cd9af6e")
+		(property "Reference" "U6"
+			(at 107.95 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "LM3691TL-1.0/NOPB"
+			(at 107.95 68.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "openic:DSBGA-6-P0.5"
+			(at 107.95 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 101.6 71.12 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "LM3691TL-1.0/NOPB"
+			(at 101.6 71.12 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "LM3691TL-1.0/NOPB"
+			(at 107.95 76.2 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "TI"
+			(at 107.95 76.2 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "B1"
+			(uuid "23774ef3-5b4b-415b-a9ce-774dced862e2")
+		)
+		(pin "C2"
+			(uuid "e5fbcf47-cdc5-424e-8bd1-4de273f219a3")
+		)
+		(pin "A2"
+			(uuid "4c9412d9-c218-4549-b3b0-9b604c3896ed")
+		)
+		(pin "B2"
+			(uuid "c2110327-aa6f-4d3f-a3cf-208be73099b1")
+		)
+		(pin "C1"
+			(uuid "3d5d5c8a-7681-4cdf-aeac-97c1f99e5509")
+		)
+		(pin "A1"
+			(uuid "fa4531c0-d19e-45fe-832c-e15aa9c0f37d")
+		)
+		(instances
+			(project ""
+				(path "/580d68eb-8c9d-43fe-9981-36adf9441ae7/7f2a4819-a70f-4eb5-a2d4-e583f50a4238"
+					(reference "U6")
+					(unit 1)
+				)
+			)
+		)
+	)
+)

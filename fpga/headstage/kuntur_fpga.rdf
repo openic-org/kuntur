@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RadiantProject version="4.2" radiant="2025.2.1.321.0" title="kuntur_fpga" device="LIFCL-17-8UWG72C" performance_grade="8_High-Performance_1.0V" family_int="je5d00" device_int="je5d15" package_int="WLCSP72" operation_int="COM" speed_int="11" default_implementation="impl_25k">
+    <Options/>
+    <Implementation title="impl_1" dir="impl_1" description="impl_1" synthesis="lse" default_strategy="Strategy1">
+        <Options def_top="pll0" top="kuntur_fpga"/>
+        <Source name="source/impl_1/kuntur_fpga.v" type="Verilog" type_short="Verilog">
+            <Options top_module="kuntur_fpga"/>
+        </Source>
+        <Source name="pll0/pll0.ipx" type="IPX_Module" type_short="IPX">
+            <Options/>
+        </Source>
+        <Source name="source/impl_1/kuntur_build.vh" type="Verilog" type_short="Verilog">
+            <Options/>
+        </Source>
+        <Source name="pll_25k/pll_25k.ipx" type="IPX_Module" type_short="IPX">
+            <Options/>
+        </Source>
+        <Source name="pll_28k/pll_28k.ipx" type="IPX_Module" type_short="IPX">
+            <Options/>
+        </Source>
+        <Source name="source/impl_1/impl_1.sdc" type="Pre-Synthesis Constraints File" type_short="SDC">
+            <Options/>
+        </Source>
+        <Source name="source/impl_1/impl_1.pdc" type="Physical Constraints File" type_short="PDC">
+            <Options/>
+        </Source>
+        <Source name="source/impl_1_1.xcf" type="Programming Project File" type_short="Programming">
+            <Options/>
+        </Source>
+    </Implementation>
+    <Implementation title="impl_25k" dir="impl_25k" description="impl_25k" synthesis="lse" default_strategy="Strategy1">
+        <Options VERILOG_DIRECTIVES="KUNTUR_VARIANT=4'd2" def_top="kuntur_fpga" top="kuntur_fpga"/>
+        <Source name="source/impl_1/kuntur_fpga.v" type="Verilog" type_short="Verilog">
+            <Options top_module="kuntur_fpga"/>
+        </Source>
+        <Source name="pll_25k/pll_25k.ipx" type="IPX_Module" type_short="IPX">
+            <Options/>
+        </Source>
+        <Source name="pll_28k/pll_28k.ipx" type="IPX_Module" type_short="IPX">
+            <Options/>
+        </Source>
+        <Source name="source/impl_1/kuntur_25k.sdc" type="Pre-Synthesis Constraints File" type_short="SDC">
+            <Options/>
+        </Source>
+        <Source name="source/impl_1/impl_1.pdc" type="Physical Constraints File" type_short="PDC">
+            <Options/>
+        </Source>
+        <Source name="source/impl_25k.xcf" type="Programming Project File" type_short="Programming">
+            <Options/>
+        </Source>
+    </Implementation>
+    <Implementation title="impl_25k_bench" dir="impl_25k_bench" description="impl_25k_bench" synthesis="lse" default_strategy="Strategy1">
+        <Options VERILOG_DIRECTIVES="KUNTUR_VARIANT=4'd3" def_top="kuntur_fpga" top="kuntur_fpga"/>
+        <Source name="source/impl_1/kuntur_fpga.v" type="Verilog" type_short="Verilog">
+            <Options/>
+        </Source>
+        <Source name="pll_25k/pll_25k.ipx" type="IPX_Module" type_short="IPX">
+            <Options/>
+        </Source>
+        <Source name="pll_28k/pll_28k.ipx" type="IPX_Module" type_short="IPX">
+            <Options/>
+        </Source>
+        <Source name="source/impl_1/kuntur_25k.sdc" type="Pre-Synthesis Constraints File" type_short="SDC">
+            <Options/>
+        </Source>
+        <Source name="source/impl_1/impl_1.pdc" type="Physical Constraints File" type_short="PDC">
+            <Options/>
+        </Source>
+    </Implementation>
+    <Implementation title="impl_28k" dir="impl_28k" description="impl_28k" synthesis="lse" default_strategy="Strategy1">
+        <Options VERILOG_DIRECTIVES="KUNTUR_VARIANT=4'd1" def_top="kuntur_fpga" top="kuntur_fpga"/>
+        <Source name="source/impl_1/kuntur_fpga.v" type="Verilog" type_short="Verilog">
+            <Options/>
+        </Source>
+        <Source name="pll_25k/pll_25k.ipx" type="IPX_Module" type_short="IPX">
+            <Options/>
+        </Source>
+        <Source name="pll_28k/pll_28k.ipx" type="IPX_Module" type_short="IPX">
+            <Options/>
+        </Source>
+        <Source name="source/impl_1/kuntur_28k.sdc" type="Pre-Synthesis Constraints File" type_short="SDC">
+            <Options/>
+        </Source>
+        <Source name="source/impl_1/impl_1.pdc" type="Physical Constraints File" type_short="PDC">
+            <Options/>
+        </Source>
+    </Implementation>
+    <Strategy name="Strategy1" file="kuntur_fpga1.sty"/>
+</RadiantProject>

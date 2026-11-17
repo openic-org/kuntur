@@ -1,0 +1,267 @@
+{
+  "Header": {
+    "GenerationSoftware": {
+      "Vendor": "KiCad",
+      "Application": "Pcbnew",
+      "Version": "8.0.5"
+    },
+    "CreationDate": "2024-11-18T09:14:42-06:00"
+  },
+  "GeneralSpecs": {
+    "ProjectId": {
+      "Name": "chimu_fpga_ble_v1",
+      "GUID": "6368696d-755f-4667-9067-615f626c655f",
+      "Revision": "rev?"
+    },
+    "Size": {
+      "X": 24.05,
+      "Y": 13.05
+    },
+    "LayerNumber": 8,
+    "BoardThickness": 0.8697,
+    "Finish": "ENIG",
+    "ImpedanceControlled": true
+  },
+  "DesignRules": [
+    {
+      "Layers": "Outer",
+      "PadToPad": 0.0762,
+      "PadToTrack": 0.0762,
+      "TrackToTrack": 0.0762,
+      "MinLineWidth": 0.0762,
+      "TrackToRegion": 0.0762,
+      "RegionToRegion": 0.0762
+    },
+    {
+      "Layers": "Inner",
+      "PadToPad": 0.0,
+      "PadToTrack": 0.0,
+      "TrackToTrack": 0.0762,
+      "MinLineWidth": 0.0762,
+      "TrackToRegion": 0.0762,
+      "RegionToRegion": 0.0762
+    }
+  ],
+  "FilesAttributes": [
+    {
+      "Path": "chimu_fpga_ble_v1-F_Cu.gbr",
+      "FileFunction": "Copper,L1,Top",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-L2_Cu.gbr",
+      "FileFunction": "Copper,L2,Inr",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-L3_Cu.gbr",
+      "FileFunction": "Copper,L3,Inr",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-L4_Cu.gbr",
+      "FileFunction": "Copper,L4,Inr",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-L5_Cu.gbr",
+      "FileFunction": "Copper,L5,Inr",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-L6_Cu.gbr",
+      "FileFunction": "Copper,L6,Inr",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-L7_Cu.gbr",
+      "FileFunction": "Copper,L7,Inr",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-B_Cu.gbr",
+      "FileFunction": "Copper,L8,Bot",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-F_Paste.gbr",
+      "FileFunction": "SolderPaste,Top",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-B_Paste.gbr",
+      "FileFunction": "SolderPaste,Bot",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-F_Silkscreen.gbr",
+      "FileFunction": "Legend,Top",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-B_Silkscreen.gbr",
+      "FileFunction": "Legend,Bot",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-F_Mask.gbr",
+      "FileFunction": "SolderMask,Top",
+      "FilePolarity": "Negative"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-B_Mask.gbr",
+      "FileFunction": "SolderMask,Bot",
+      "FilePolarity": "Negative"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-Edge_Cuts.gbr",
+      "FileFunction": "Profile",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-F_Fab.gbr",
+      "FileFunction": "AssemblyDrawing,Top",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "chimu_fpga_ble_v1-B_Fab.gbr",
+      "FileFunction": "AssemblyDrawing,Bot",
+      "FilePolarity": "Positive"
+    }
+  ],
+  "MaterialStackup": [
+    {
+      "Type": "Legend",
+      "Color": "White",
+      "Name": "Top Silk Screen"
+    },
+    {
+      "Type": "SolderPaste",
+      "Name": "Top Solder Paste"
+    },
+    {
+      "Type": "SolderMask",
+      "Color": "Blue",
+      "Thickness": 0.0178,
+      "Name": "Top Solder Mask"
+    },
+    {
+      "Type": "Copper",
+      "Thickness": 0.0279,
+      "Name": "F.Cu"
+    },
+    {
+      "Type": "Dielectric",
+      "Thickness": 0.0706,
+      "Material": "FR4",
+      "DielectricConstant": "3.14",
+      "LossTangent": "0.0051",
+      "Name": "F.Cu/L2.Cu",
+      "Notes": "Type: dielectric layer 1 (from F.Cu to L2.Cu)"
+    },
+    {
+      "Type": "Copper",
+      "Thickness": 0.0279,
+      "Name": "L2.Cu"
+    },
+    {
+      "Type": "Dielectric",
+      "Thickness": 0.0706,
+      "Material": "FR4",
+      "DielectricConstant": "3.14",
+      "LossTangent": "0.0051",
+      "Name": "L2.Cu/L3.Cu",
+      "Notes": "Type: dielectric layer 2 (from L2.Cu to L3.Cu)"
+    },
+    {
+      "Type": "Copper",
+      "Thickness": 0.0279,
+      "Name": "L3.Cu"
+    },
+    {
+      "Type": "Dielectric",
+      "Thickness": 0.0726,
+      "Material": "FR4",
+      "DielectricConstant": "3.14",
+      "LossTangent": "0.0051",
+      "Name": "L3.Cu/L4.Cu",
+      "Notes": "Type: dielectric layer 3 (from L3.Cu to L4.Cu)"
+    },
+    {
+      "Type": "Copper",
+      "Thickness": 0.0178,
+      "Name": "L4.Cu"
+    },
+    {
+      "Type": "Dielectric",
+      "Thickness": 0.2032,
+      "Material": "FR4",
+      "DielectricConstant": "3.37",
+      "LossTangent": "0.0052",
+      "Name": "L4.Cu/L5.Cu",
+      "Notes": "Type: dielectric layer 4 (from L4.Cu to L5.Cu)"
+    },
+    {
+      "Type": "Copper",
+      "Thickness": 0.0178,
+      "Name": "L5.Cu"
+    },
+    {
+      "Type": "Dielectric",
+      "Thickness": 0.0726,
+      "Material": "FR4",
+      "DielectricConstant": "3.14",
+      "LossTangent": "0.0051",
+      "Name": "L5.Cu/L6.Cu",
+      "Notes": "Type: dielectric layer 5 (from L5.Cu to L6.Cu)"
+    },
+    {
+      "Type": "Copper",
+      "Thickness": 0.0279,
+      "Name": "L6.Cu"
+    },
+    {
+      "Type": "Dielectric",
+      "Thickness": 0.0706,
+      "Material": "FR4",
+      "DielectricConstant": "3.14",
+      "LossTangent": "0.0051",
+      "Name": "L6.Cu/L7.Cu",
+      "Notes": "Type: dielectric layer 6 (from L6.Cu to L7.Cu)"
+    },
+    {
+      "Type": "Copper",
+      "Thickness": 0.0279,
+      "Name": "L7.Cu"
+    },
+    {
+      "Type": "Dielectric",
+      "Thickness": 0.0706,
+      "Material": "FR4",
+      "DielectricConstant": "3.14",
+      "LossTangent": "0.0051",
+      "Name": "L7.Cu/B.Cu",
+      "Notes": "Type: dielectric layer 7 (from L7.Cu to B.Cu)"
+    },
+    {
+      "Type": "Copper",
+      "Thickness": 0.0279,
+      "Name": "B.Cu"
+    },
+    {
+      "Type": "SolderMask",
+      "Color": "Blue",
+      "Thickness": 0.0178,
+      "Name": "Bottom Solder Mask"
+    },
+    {
+      "Type": "SolderPaste",
+      "Name": "Bottom Solder Paste"
+    },
+    {
+      "Type": "Legend",
+      "Color": "White",
+      "Name": "Bottom Silk Screen"
+    }
+  ]
+}
