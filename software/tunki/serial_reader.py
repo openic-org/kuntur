@@ -1,0 +1,339 @@
+"""
+SerialReader — QThread that reads the nRF52840 USB CDC serial port, re-syncs on
+the 0xAA 0x55 magic prefix, and emits decoded packets to the UI thread.
+"""
+
+import serial
+import serial.tools.list_ports
+from PyQt6.QtCore import QThread, pyqtSignal
+import numpy as np
+from packet_parser import (parse, ParsedPacket, MAGIC, PACKET_SIZE, SAMPLE_RATE_HZ,
+                           SeqGapTracker, sample_offsets_us)
+import telemetry
+
+BAUD_RATE   = 2000000  # must match WB09KE bridge USART1; ST-LINK VCP is baud-sensitive
+READ_TIMEOUT = 1.0     # seconds
+
+# Command-frame framing (pc-app -> bridge), distinct from the 0xAA 0x55
+# data-direction magic so a framing bug can't cross-interpret the two.
+# See docs/interfaces/channel-selection-control-plane.md section 3.
+CMD_MAGIC          = bytes([0xCC, 0x33])
+CMD_SET_CHANNELS   = 0x01
+CMD_STOP_STREAMING = 0x02
+CMD_START_STREAMING = 0x03
+# Register console — docs/interfaces/fpga-diagnostic-access.md section 2.
+# The diagnostic path behind the A.1.1 verification ladder: raw access to any
+# of the 256 FPGA regbank words, reaching what SET_CHANNELS deliberately
+# cannot (sampling slot 32, RHD command injection, arbitrary readback).
+CMD_REG_WRITE16    = 0x04
+CMD_REG_READ16     = 0x05
+
+# Command-response framing (bridge -> pc-app). See
+# docs/interfaces/channel-selection-control-plane.md sections 4.4 and 5.6.
+# Payload's first byte is always a type/cmd tag matching the CMD_* values
+# above, so a response always echoes which command it's answering:
+#   CMD_SET_CHANNELS   (0x01): [0x01, ch_a, ch_b]   (3 bytes) — readback
+#   CMD_STOP_STREAMING (0x02): [0x02, success]      (2 bytes) — ack
+#   CMD_START_STREAMING(0x03): [0x03, success]      (2 bytes) — ack
+#   CMD_REG_WRITE16    (0x04): [0x04, addr, lo, hi] (4 bytes) — value READ BACK
+#   CMD_REG_READ16     (0x05): [0x05, addr, lo, hi] (4 bytes)
+RESPONSE_MAGIC = bytes([0xEE, 0x11])
+
+# Telemetry framing (bridge -> pc-app). See
+# docs/interfaces/stream-packet-format.md section 6 and telemetry.py.
+# ~1 Hz, out of band from the sample stream: cumulative loss counters from the
+# FPGA, the MCU and the bridge, plus the RTC time anchor.
+TELEMETRY_MAGIC = telemetry.TELEMETRY_MAGIC
+
+
+class SerialReader(QThread):
+    """
+    Signals:
+      batch_received(packet)  — emitted for every successfully parsed packet
+      connection_changed(connected, port_name)
+      error(message)
+    """
+    batch_received     = pyqtSignal(object)   # ParsedPacket
+    connection_changed = pyqtSignal(bool, str)
+    error              = pyqtSignal(str)
+    channels_readback  = pyqtSignal(int, int)   # ch_a, ch_b — SET_CHANNELS readback (section 4.4)
+    stop_streaming_ack  = pyqtSignal(bool)       # success — real MCU confirmation (section 5.6)
+    start_streaming_ack = pyqtSignal(bool)       # success — real MCU confirmation (section 5.6)
+    # type (CMD_REG_WRITE16 / CMD_REG_READ16), addr, value — register console.
+    # For a write, value is what the FPGA regbank read back, not what was sent.
+    reg_access_response = pyqtSignal(int, int, int)
+    # telemetry.TelemetryFrame — ~1 Hz loss report, section 6.
+    telemetry_received = pyqtSignal(object)
+    # One line of printable text found between frames — the bridge's
+    # CFG_DEBUG_APP_TRACE output (make TRACE=1). It shares this port with the
+    # frames and can never forge one: every magic byte is >= 0x80.
+    text_line = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._port_name  = ""
+        self._running    = False
+        self._port: serial.Serial | None = None
+
+        # Statistics
+        self.total_packets  = 0
+        self._gaps = SeqGapTracker()
+        # Aggregate samples received (2 per pair — both channels), counted the
+        # same way the MCU counts anchor_sample_index so the two are directly
+        # comparable. Their difference over an interval is the whole-path
+        # sample loss; see docs/interfaces/stream-packet-format.md section 6.7.
+        self.total_samples  = 0
+        self.telemetry_frames = 0
+        # 0xDD 0x22 frames that arrived but telemetry.parse() refused. Without
+        # this a malformed frame reads exactly like no frame at all.
+        self.telemetry_rejected = 0
+        self._text = bytearray()
+
+        # Monotonicity clamp: tracks the last timestamp emitted so that
+        # backwards jumps caused by BLE burst delivery / 1 ms RTC resolution
+        # are replaced with a forward-continuing sequence.
+        self._last_ts_us: int = 0
+        # The operator's rate (kuntur_rate.py, PLAN.md R7): spaces samples
+        # inside a packet and the clamp's step. Set before start(); the
+        # window refuses to connect without one.
+        self._rate_hz: float = float(SAMPLE_RATE_HZ)
+
+    @property
+    def dropped_packets(self) -> int:
+        """Sum of seq gaps — a lower bound whenever uncertain_gaps > 0."""
+        return self._gaps.dropped_packets
+
+    @property
+    def uncertain_gaps(self) -> int:
+        return self._gaps.uncertain_gaps
+
+    def drops_summary(self) -> str:
+        return self._gaps.summary()
+
+    def set_sample_rate(self, channel_hz: float):
+        """The operator's per-channel rate (kuntur_rate.py). Call before
+        start(); the window does not change it while connected."""
+        self._rate_hz = float(channel_hz)
+
+    def set_port(self, port_name: str):
+        self._port_name = port_name
+
+    def send_command(self, payload: bytes) -> bool:
+        """Send a command frame to the bridge: 0xCC 0x33 <len> <payload>.
+        Called from the UI thread while run() reads on this QThread — same
+        cross-thread self._port access pattern stop() already relies on."""
+        if self._port is None or not self._port.is_open:
+            return False
+        frame = CMD_MAGIC + bytes([len(payload)]) + payload
+        try:
+            self._port.write(frame)
+        except (serial.SerialException, OSError):
+            return False
+        return True
+
+    def send_set_channels(self, ch_a: int, ch_b: int) -> bool:
+        """SET_CHANNELS command — see
+        docs/interfaces/channel-selection-control-plane.md section 2.
+        As of section 5, the MCU rejects this unless streaming is already
+        stopped (send_stop_streaming() first) — this method doesn't enforce
+        that itself, callers must sequence it (see MainWindow._apply_channels)."""
+        if not (0 <= ch_a <= 127 and 0 <= ch_b <= 127):
+            raise ValueError("channel index must be 0-127")
+        return self.send_command(bytes([CMD_SET_CHANNELS, ch_a, ch_b]))
+
+    def send_stop_streaming(self) -> bool:
+        """STOP_STREAMING command — see
+        docs/interfaces/channel-selection-control-plane.md section 5.1."""
+        return self.send_command(bytes([CMD_STOP_STREAMING]))
+
+    def send_reg_write16(self, addr: int, value: int) -> bool:
+        """Write one FPGA regbank word — docs/interfaces/fpga-diagnostic-access.md §2.
+
+        The MCU reads the word back and returns what it actually holds, so the
+        reg_access_response for this call is a verification, not an echo.
+        Rejected by the MCU unless streaming is stopped.
+        """
+        return self.send_command(
+            bytes([CMD_REG_WRITE16, addr & 0xFF, value & 0xFF, (value >> 8) & 0xFF]))
+
+    def send_reg_read16(self, addr: int) -> bool:
+        """Read one FPGA regbank word. Rejected by the MCU unless streaming is stopped."""
+        return self.send_command(bytes([CMD_REG_READ16, addr & 0xFF]))
+
+    def send_start_streaming(self) -> bool:
+        """START_STREAMING command — see
+        docs/interfaces/channel-selection-control-plane.md section 5.1."""
+        return self.send_command(bytes([CMD_START_STREAMING]))
+
+    def stop(self):
+        self._running = False
+        if self._port and self._port.is_open:
+            self._port.close()
+
+    def run(self):
+        self._running = True
+        try:
+            self._port = serial.Serial(
+                self._port_name,
+                baudrate=BAUD_RATE,
+                timeout=READ_TIMEOUT,
+            )
+            self.connection_changed.emit(True, self._port_name)
+        except serial.SerialException as e:
+            self.error.emit(f"Cannot open {self._port_name}: {e}")
+            return
+
+        buf = bytearray()
+
+        while self._running:
+            try:
+                chunk = self._port.read(512)
+            except (serial.SerialException, OSError, TypeError):
+                # OSError/TypeError: port fd closed by stop() while read() was blocked
+                break
+
+            if not chunk:
+                continue
+
+            buf.extend(chunk)
+
+            # Re-sync: find whichever frame magic comes first and extract
+            # complete frames of that type. Three types share this wire —
+            # 0xAA 0x55 samples, 0xEE 0x11 command responses, 0xDD 0x22
+            # telemetry — all with the same [magic][uint16 len][payload]
+            # shape, so only the dispatch below differs.
+            while True:
+                found = [
+                    (buf.find(magic), kind)
+                    for magic, kind in (
+                        (MAGIC,           "data"),
+                        (RESPONSE_MAGIC,  "response"),
+                        (TELEMETRY_MAGIC, "telemetry"),
+                    )
+                ]
+                found = [(i, kind) for i, kind in found if i != -1]
+
+                if not found:
+                    # No magic found — keep last 1 byte (could be partial magic)
+                    self._capture_text(buf[:-1])
+                    buf = buf[-1:]
+                    break
+
+                idx, kind = min(found)
+
+                if idx > 0:
+                    # Discard garbage before magic — keeping any text in it
+                    self._capture_text(buf[:idx])
+                    buf = buf[idx:]
+
+                # Need magic(2) + length(2) + payload
+                if len(buf) < 4:
+                    break
+
+                frame_len = int.from_bytes(buf[2:4], "little")
+                total_frame = 4 + frame_len
+
+                if len(buf) < total_frame:
+                    break   # wait for more data
+
+                payload = bytes(buf[4:total_frame])
+                buf = buf[total_frame:]
+
+                if kind == "telemetry":
+                    frame = telemetry.parse(payload)
+                    if frame is not None:
+                        self.telemetry_frames += 1
+                        self.telemetry_received.emit(frame)
+                    else:
+                        self.telemetry_rejected += 1
+                    continue
+
+                if kind == "response":
+                    if len(payload) >= 1:
+                        rtype = payload[0]
+                        if rtype == CMD_SET_CHANNELS and len(payload) >= 3:
+                            self.channels_readback.emit(payload[1], payload[2])
+                        elif rtype == CMD_STOP_STREAMING and len(payload) >= 2:
+                            if payload[1]:
+                                self._gaps.pause()
+                            self.stop_streaming_ack.emit(bool(payload[1]))
+                        elif rtype == CMD_START_STREAMING and len(payload) >= 2:
+                            self.start_streaming_ack.emit(bool(payload[1]))
+                        elif rtype in (CMD_REG_WRITE16, CMD_REG_READ16) and len(payload) >= 4:
+                            self.reg_access_response.emit(
+                                rtype, payload[1], payload[2] | (payload[3] << 8))
+                        # else: unknown type or short payload — ignore
+                    continue
+
+                packet = parse(payload, self._rate_hz)
+                if packet is None:
+                    continue
+
+                # Monotonicity clamp: if this packet's first timestamp doesn't
+                # strictly follow the previous one, rebase it forward.  This
+                # fixes backwards jumps from BLE burst delivery where multiple
+                # packets share the same RTC base timestamp.  Genuine forward
+                # gaps (missed CIs) are left untouched.
+                # A header-only/malformed packet (num_pairs == 0) carries no
+                # samples to clamp or rebase on — skip this block rather than
+                # index an empty array (found 2026-08-06 as a reader-thread
+                # crash; never triggered by real firmware, which always sends
+                # 59 pairs, but the parser must not crash on a malformed frame
+                # it can't control). _last_ts_us is deliberately left
+                # unchanged: there is no timestamp here to advance it to.
+                if len(packet.timestamps_us) > 0:
+                    if self._last_ts_us > 0 and packet.timestamps_us[0] <= self._last_ts_us:
+                        n = len(packet.timestamps_us)
+                        offs = sample_offsets_us(n + 1, self._rate_hz)
+                        # one sample step after the last one emitted, then
+                        # the packet's own rounded spacing
+                        packet.timestamps_us = self._last_ts_us + offs[1:]
+                    self._last_ts_us = int(packet.timestamps_us[-1])
+
+                # Drop detection — a lower bound once any gap is uncertain;
+                # see packet_parser.SeqGapTracker.
+                self._gaps.update(packet.header)
+
+                self.total_packets += 1
+                # 2 samples per pair — the same aggregate the MCU's
+                # anchor_sample_index counts (spec section 3.1/6.7).
+                self.total_samples += packet.header.num_pairs * 2
+                self.batch_received.emit(packet)
+
+        try:
+            if self._port and self._port.is_open:
+                self._port.close()
+        except OSError:
+            pass  # already closed by stop()
+        self._last_ts_us = 0
+        self._gaps.pause()
+        self.connection_changed.emit(False, self._port_name)
+
+    def _capture_text(self, junk: bytes) -> None:
+        """Split printable runs out of discarded bytes into lines. A
+        non-printable byte means corruption rather than text, so it drops the
+        partial line instead of splicing garbage into it."""
+        for b in junk:
+            if b == 0x0A:
+                line = self._text.decode("ascii").strip()
+                self._text.clear()
+                if line:
+                    self.text_line.emit(line)
+            elif 0x20 <= b < 0x7F or b in (0x09, 0x0D):
+                self._text.append(b)
+                if len(self._text) >= 240:   # no newline coming; flush anyway
+                    self.text_line.emit(self._text.decode("ascii").strip())
+                    self._text.clear()
+            else:
+                self._text.clear()
+
+    @staticmethod
+    def list_ports() -> list[str]:
+        """Only ttyACM* devices — this app only ever talks to a WB09KE
+        bridge over its USB CDC ACM port, so a full unfiltered port list
+        (ttyS*, Bluetooth RFCOMM, etc.) is noise the operator has to read
+        past every time, not a real choice."""
+        return sorted(
+            p.device for p in serial.tools.list_ports.comports()
+            if "ttyACM" in p.device
+        )

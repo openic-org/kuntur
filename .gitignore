@@ -1,0 +1,137 @@
+# kuntur monorepo — merged from the kuntur (hardware/FPGA/MCU) and vega
+# (pc-app/bridge) .gitignore files, 2026-11. Rules are scoped to the
+# directory they belong to wherever an unscoped rule would swallow files
+# elsewhere in the tree (the old kuntur file ignored every *.csv and the
+# old vega file ignored every build/).
+
+# ── Editors / OS ─────────────────────────────────────────────────────────────
+*~
+*.swp
+.DS_Store
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+.history/
+.idea/
+*.bak
+*.tmp
+*.log
+
+# ── Archives ─────────────────────────────────────────────────────────────────
+*.zip
+*.tar.gz
+*.rar
+
+# ── C / embedded build output ────────────────────────────────────────────────
+*.o
+*.d
+*.su
+*.obj
+*.elf
+*.hex
+*.map
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.out
+*.gch
+*.pch
+*.cyclo
+
+# Bridge: Makefile build trees
+firmware/ble-usb-bridge/build/
+firmware/ble-usb-bridge/build-trace/
+firmware/ble-usb-bridge/*.bin
+
+# Headstage MCU: STM32CubeIDE regenerates everything in Debug/ on a build.
+# Keep only the generated makefiles — the CLI build (`make all` in Debug/)
+# needs them, and objects.list is one of them.
+firmware/headstage/Debug/**
+!firmware/headstage/Debug/**/
+!firmware/headstage/Debug/makefile
+!firmware/headstage/Debug/**/*.mk
+!firmware/headstage/Debug/objects.list
+firmware/headstage/.metadata
+firmware/headstage/tests/test_fpga_spi
+
+# ── FPGA (Lattice Radiant) ───────────────────────────────────────────────────
+# Every synthesis/PAR run regenerates the contents of impl_*/. The BITSTREAM
+# stays tracked deliberately: chip0 is intermittent over hours, so "which
+# bitstream was on the board?" must be answerable from the records. Commit the
+# .bit with its SHA-256 and its bench result whenever a bench claim is made.
+# If a specific report is ever needed as evidence, commit that copy
+# deliberately (git add -f) alongside the .bit.
+fpga/*/impl_*/**
+!fpga/*/impl_*/**/
+!fpga/*/impl_*/*.bit
+# GUI session state and simulator output
+fpga/*/.setting.ini
+fpga/*/.floorplanner.ini
+fpga/*/.ng_run_manager.ini
+fpga/*/.recovery
+fpga/*/dliteTcl.tcl
+fpga/*/groupcolor.ini
+fpga/*/regioncolor.ini
+fpga/*/tb_rtl/*.wlf
+fpga/*/tb_rtl/qrun.out/
+fpga/*/tb_rtl/work/
+transcript
+radiantc.log.*
+radiantc.tcl.*
+*.pfl
+*_ip_summary.xml
+message_log.xml
+promote.xml
+reportview.xml
+
+# ── KiCad ────────────────────────────────────────────────────────────────────
+*.000
+*.bck
+*.kicad_pcb-bak
+*.kicad_sch-bak
+*.sch-bak
+*-backups/
+*.kicad_prl
+_autosave-*
+*-save.pro
+*-save.kicad_pcb
+fp-info-cache
+~*.lck
+\#auto_saved_files#
+hardware/**/*.net
+hardware/**/*.dsn
+hardware/**/*.ses
+hardware/**/*.FCBak
+# Exported BOMs and pick-and-place files ARE tracked (the old repo ignored
+# every *.csv, so they existed only on one disk). Only KiCad XML BOM exports
+# stay out, scoped to the hardware tree (an unscoped *.xml once swallowed
+# Lattice IP-Catalog component.xml/design.xml).
+hardware/**/*.xml
+
+# ── Python (software/tunki) ──────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.pytest_cache/
+
+# Recordings and bench/soak data are research data: they live in a private
+# research repo, never here.
+software/tunki/recordings/
+software/tunki/bench/
+software/tunki/analysis/
+software/tunki/stall_log_*.txt
+vega_*.csv
+
+# ── Local only ───────────────────────────────────────────────────────────────
+# Claude Code project notes: kept at the root of each working copy, never
+# published (they carry private status; the tracked copy lives in the private
+# notes repo).
+/CLAUDE.md

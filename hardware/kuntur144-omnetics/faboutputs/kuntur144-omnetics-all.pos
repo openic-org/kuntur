@@ -1,0 +1,10 @@
+### Footprint positions - created on 2025-07-29T13:55:36-0700 ###
+### Printed by KiCad version 8.0.1
+## Unit = mm, Angle = deg.
+## Side : All
+# Ref     Val       Package                    PosX       PosY       Rot  Side
+J0        ~         DF40C(2.0)-24DP-0.4V    87.0000   -85.0254    0.0000  bottom
+J1        ~         OMNETICS_PZN-12-AA      87.0332   -84.6167  -90.0000  top
+J2        ~         OMNETICS_PZN-16-AA      87.0336   -77.4315  -90.0000  top
+R0        100       R_0402_1005Metric       87.6249   -80.9047    0.0000  top
+## End
