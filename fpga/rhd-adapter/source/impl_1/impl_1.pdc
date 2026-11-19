@@ -21,3 +21,5 @@ ldc_set_port -iobuf {PULLMODE=NONE} [get_ports clkin]
 ldc_set_location -site {G13} [get_ports led_n_2]
 ldc_set_location -site {F14} [get_ports led_n_3]
 ldc_set_location -site {L16} [get_ports led_n_4]
+ldc_set_sysconfig {SLAVE_I2C_PORT=DISABLE}
+ldc_set_location -site {E20} [get_ports con_tx]
