@@ -42,6 +42,8 @@ module intan_rec_adapter (
 	input  wire	spi0_mosi,		// Y15 (LVDS)
 	output wire	spi0_miso1,		// Y13 (LVDS)
 	output wire	spi0_miso0,		// U15 (LVDS)
+	// UART Console
+	output wire	con_tx,			// E20 (LVCMOS)
 	// LED visualizer
 	output wire	led_n_4,		// L16 (LVCMOS)
 	output wire	led_n_3,		// F14 (LVCMOS)
@@ -146,7 +148,10 @@ module intan_rec_adapter (
 	);
 	
 	
-	
+	wire [8:0] phase, eye_center, eye_width;
+	wire [7:0] dout;
+	wire [2:0] pos;
+	wire [31:0] pat_blocks, pat_errors;
 	
 	// Primitive block: Edge-clock synchronizer
 	ECLKSYNC #(
@@ -195,7 +200,14 @@ module intan_rec_adapter (
 		.pll_phasedir	(pll_phasedir), // output
 		.pll_phasestep_sync	(pll_phasestep), // output
 		.rdy	(cdr_rdy),
-		.valid	(cdr_valid)
+		.valid	(cdr_valid),
+		.eye_center	(eye_center),
+		.eye_width	(eye_width),
+	
+		// to pat_monitor
+		.phase	(phase),
+		.dout	(dout),
+		.pos	(pos)
 	);
 	
 	// **********************************************************
@@ -255,9 +267,1287 @@ module intan_rec_adapter (
 			spi0_data_tx_b1 <= reg_ram0_dout1_16b;
 		end
 
+
+
+
+
+	wire con_rst_n;
+
+	console_por console_por_0 (
+		.clk	(clkin),
+		.con_rst_n	(con_rst_n)
+	);
+	
+	
+	pat_monitor pat_monitor_0 (
+		// inputs
+		.rst_n	(con_rst_n),
+		.wclk	(wclk),
+		.valid	(cdr_valid),
+		.din	(dout),
+		.pos	(pos),
+		// outputs
+		.pat_blocks	(pat_blocks),
+		.pat_errors	(pat_errors)
+	);
+	
+	
+	console #(
+		.DIV (24'd12000000),
+		.TIMEOUT (24'd120000),
+		.MODE_PATTERN (1'b1)
+	) console0 (
+		// inputs
+		.clkin	(clkin),
+		.wclk	(wclk),
+		.con_rst_n	(con_rst_n),
+		.lock_sync	(lock_sync),
+		.cdr_rdy	(cdr_rdy),
+		.cdr_valid	(cdr_valid),
+		.phase	(phase),
+		.eye_center	(eye_center),
+		.eye_width	(eye_width),
+		.pat_blocks	(pat_blocks),
+		.pat_errors	(pat_errors),
+		// outputs
+		.con_tx	(con_tx)
+	);
+	
+
+
+
+
 endmodule
 
 
+
+
+
+module console_por (
+	input  wire clk,
+	output wire	con_rst_n
+);
+	
+	localparam POR_CYCLES = 8'd16;
+	localparam CNT0_BITS = 5;
+	wire [CNT0_BITS-1:0] cnt0, cnt0_d;
+	wire cnt0_en, cnt0_is_max;
+	
+	genvar i;
+	
+	// cnt0 starting at 0
+	generate
+		for ( i=0; i<CNT0_BITS; i = i+1 ) begin: por_cnt0
+			FD1P3DX #(.GSR("ENABLED")) ff0 ( .D(cnt0_d[i]), .SP(cnt0_en), .CK(clk), .CD(1'b0), .Q(cnt0[i]) );
+		end
+	endgenerate
+	
+	assign cnt0_d = cnt0 + 5'd1;
+	assign cnt0_en = ~con_rst_n;
+
+
+	// con_rst_n starting at 0 for POR_CYCLES 
+	assign cnt0_is_max = (cnt0 == POR_CYCLES-1);
+	FD1P3DX #(.GSR("ENABLED")) ff1 ( .D(1'b1), .SP(cnt0_is_max), .CK(clk), .CD(1'b0), .Q(con_rst_n) );
+
+endmodule
+
+
+
+
+
+
+
+
+module console #(
+	parameter DIV = 24'd12000000,
+	parameter TIMEOUT = 24'd120000,
+	parameter MODE_PATTERN = 1'b1
+)(
+	input  wire	clkin,
+	input  wire	wclk,
+	input  wire	con_rst_n,
+	input  wire	lock_sync,
+	input  wire	cdr_rdy,
+	input  wire	cdr_valid,
+	input  wire	[8:0]	phase,
+	input  wire	[8:0]	eye_center,
+	input  wire	[8:0]	eye_width,
+	input  wire	[31:0]	pat_blocks,
+	input  wire	[31:0]	pat_errors,
+	output wire	con_tx
+);
+	
+	wire tick;
+	wire [31:0] t;
+	
+	wire snap_req;
+	wire sh_cdr_rdy;
+	wire sh_cdr_valid;
+	wire [8:0] sh_phase;
+	wire [8:0] sh_eye_center;
+	wire [8:0] sh_eye_width;
+	wire [31:0] sh_pat_blocks;
+	wire [31:0] sh_pat_errors;
+	wire snap_ack;
+	
+	
+	wire [31:0] h_t;
+	wire h_lock;
+	wire h_snap_ok;
+	wire h_cdr_rdy;
+	wire h_cdr_valid;
+	wire [8:0]	h_phase;
+	wire [8:0]	h_eye_center;
+	wire [8:0]	h_eye_width;
+	wire [31:0]	h_pat_blocks;
+	wire [31:0]	h_pat_errors;
+	wire go;
+	
+	
+	wire snap_ok;
+	wire uart_rdy;
+	wire uart_start;
+	wire [7:0] uart_data;
+
+	
+	
+	console_timer #(
+		.DIV (DIV)
+	) console_timer_0 (
+		.clk	(clkin),	// input
+		.rst_n	(con_rst_n),	// input
+		.tick	(tick),	// output
+		.t		(t)	// output [31:0]
+	);
+	
+	
+	console_shadow console_shadow_0 (
+		// inputs
+		.rst_n	(con_rst_n),
+		.wclk	(wclk),
+		.snap_req	(snap_req),
+		.cdr_rdy	(cdr_rdy),
+		.cdr_valid	(cdr_valid),
+		.phase	(phase),
+		.eye_center	(eye_center),
+		.eye_width	(eye_width),
+		.pat_blocks	(pat_blocks),
+		.pat_errors	(pat_errors),
+		// outputs
+		.sh_cdr_rdy	(sh_cdr_rdy),
+		.sh_cdr_valid	(sh_cdr_valid),
+		.sh_phase	(sh_phase),
+		.sh_eye_center	(sh_eye_center),
+		.sh_eye_width	(sh_eye_width),
+		.sh_pat_blocks	(sh_pat_blocks),
+		.sh_pat_errors	(sh_pat_errors),
+		.snap_ack	(snap_ack)
+	);
+	
+	
+	
+	
+	console_snap #(
+		.TIMEOUT (TIMEOUT)
+	) console_snap_0 (
+		// inputs
+		.clk	(clkin),
+		.rst_n	(con_rst_n),
+		.tick	(tick),
+		.t		(t),
+		.lock_sync	(lock_sync),
+		.snap_ack	(snap_ack),
+		.sh_cdr_rdy	(sh_cdr_rdy),
+		.sh_cdr_valid	(sh_cdr_valid),
+		.sh_phase	(sh_phase),
+		.sh_eye_center	(sh_eye_center),
+		.sh_eye_width	(sh_eye_width),
+		.sh_pat_blocks	(sh_pat_blocks),
+		.sh_pat_errors	(sh_pat_errors),
+		// outputs
+		.h_t	(h_t),
+		.h_lock	(h_lock),
+		.h_snap_ok	(h_snap_ok),
+		.h_cdr_rdy	(h_cdr_rdy),
+		.h_cdr_valid	(h_cdr_valid),
+		.h_phase	(h_phase),
+		.h_eye_center	(h_eye_center),
+		.h_eye_width	(h_eye_width),
+		.h_pat_blocks	(h_pat_blocks),
+		.h_pat_errors	(h_pat_errors),
+		.snap_req	(snap_req),
+		.go	(go)
+	);
+	
+	
+	
+	console_fmt #(
+		.MODE_PATTERN (MODE_PATTERN)
+	) console_fmt_0 (
+		// inputs
+		.clk	(clkin),
+		.rst_n	(con_rst_n),
+		.go	(go),
+		.t	(h_t),
+		.lock	(h_lock),
+		.snap_ok	(h_snap_ok),
+		.cdr_rdy	(h_cdr_rdy),
+		.cdr_valid	(h_cdr_valid),
+		.phase	(h_phase),
+		.eye_center	(h_eye_center),
+		.eye_width	(h_eye_width),
+		.pat_blocks	(h_pat_blocks),
+		.pat_errors	(h_pat_errors),
+		.uart_rdy	(uart_rdy),
+		// outputs
+		.uart_start	(uart_start),
+		.uart_data	(uart_data),
+		.busy	()
+	);
+	
+	
+	
+	
+	
+	console_uart uart0(
+		// inputs
+		.clk	(clkin),
+		.rst_n	(con_rst_n),
+		.start	(uart_start),
+		.data_tx	(uart_data),
+		// outputs
+		.con_tx	(con_tx),
+		.rdy	(uart_rdy)
+	);
+
+	
+	
+
+endmodule
+
+
+
+
+
+
+
+
+module console_timer #(
+	parameter DIV = 24'd12000000
+)(
+	input  wire clk,
+	input  wire	rst_n,
+	output reg	tick,
+	output reg	[31:0] t
+);
+	
+	reg [23:0] cnt0;
+	
+	
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n) begin
+			cnt0 <= 24'd0;
+			tick <= 1'b0;
+			t <= 32'd0;
+		end
+		else if (cnt0 == DIV-1) begin
+			cnt0 <= 24'd0;
+			tick <= 1'b1;
+			if (t < 32'hffffffff)
+				t <= t + 32'd1;
+		end
+		else begin
+			cnt0 <= cnt0 + 24'd1;
+			tick <= 1'b0;
+		end
+	
+endmodule
+
+
+
+module console_shadow (
+	input  wire	rst_n,
+	input  wire	wclk,
+	input  wire	snap_req,
+	input  wire	cdr_rdy,
+	input  wire	cdr_valid,
+	input  wire	[8:0]	phase,
+	input  wire	[8:0]	eye_center,
+	input  wire	[8:0]	eye_width,
+	input  wire	[31:0]	pat_blocks,
+	input  wire	[31:0]	pat_errors,
+	output reg	sh_cdr_rdy,
+	output reg	sh_cdr_valid,
+	output reg	[8:0]	sh_phase,
+	output reg	[8:0]	sh_eye_center,
+	output reg	[8:0]	sh_eye_width,
+	output reg	[31:0]	sh_pat_blocks,
+	output reg	[31:0]	sh_pat_errors,
+	output reg	snap_ack
+);
+
+	reg req_s1, req_s2, req_s3;
+	wire req_t;
+	reg rst_w1, rst_w2;
+	
+	
+	// reset pulse synchronizer - async rst_n
+	always@(negedge rst_n or posedge wclk)
+		if (!rst_n) begin
+			rst_w1 <= 1'b0;
+			rst_w2 <= 1'b0;
+		end
+		else begin
+			rst_w1 <= 1'b1;
+			rst_w2 <= rst_w1;
+		end
+	
+		
+	// synchronizer
+	always@(negedge rst_w2 or posedge wclk)
+		if (!rst_w2) begin
+			req_s1 <= 1'b0;
+			req_s2 <= 1'b0;
+			req_s3 <= 1'b0;
+		end
+		else begin
+			req_s1 <= snap_req;
+			req_s2 <= req_s1;
+			req_s3 <= req_s2;
+	end
+	
+	assign req_t = req_s3 ^ req_s2;
+	
+	
+	// toggle
+	always@(negedge rst_w2 or posedge wclk)
+		if (!rst_w2)
+			snap_ack <= 1'b0;
+		else if (req_t)
+			snap_ack <= ~snap_ack;
+	
+	
+	// copy
+	always@(negedge rst_w2 or posedge wclk)
+		if (!rst_w2) begin
+			sh_cdr_rdy <= 1'b0;
+			sh_cdr_valid <= 1'b0;
+			sh_phase <= 9'd0;
+			sh_eye_center <= 9'd0;
+			sh_eye_width <= 9'd0;
+			sh_pat_blocks <= 32'd0;
+			sh_pat_errors <= 32'd0;
+		end
+		else if (req_t) begin
+			sh_cdr_rdy <= cdr_rdy;
+			sh_cdr_valid <= cdr_valid;
+			sh_phase <= phase;
+			sh_eye_center <= eye_center;
+			sh_eye_width <= eye_width;
+			sh_pat_blocks <= pat_blocks;
+			sh_pat_errors <= pat_errors;
+		end
+	
+endmodule
+
+
+
+
+
+
+
+
+module console_snap #(
+	parameter TIMEOUT = 24'd120000
+)(
+	// inputs
+	input  wire	clk,
+	input  wire	rst_n,
+	input  wire	tick,
+	input  wire	[31:0] t,
+	input  wire	lock_sync,
+	input  wire	snap_ack,
+	input  wire	sh_cdr_rdy,
+	input  wire	sh_cdr_valid,
+	input  wire	[8:0]	sh_phase,
+	input  wire	[8:0]	sh_eye_center,
+	input  wire	[8:0]	sh_eye_width,
+	input  wire	[31:0]	sh_pat_blocks,
+	input  wire	[31:0]	sh_pat_errors,
+	// outputs
+	output reg	[31:0] h_t,
+	output reg	h_lock,
+	output reg	h_snap_ok,
+	output reg	h_cdr_rdy,
+	output reg	h_cdr_valid,
+	output reg	[8:0]	h_phase,
+	output reg	[8:0]	h_eye_center,
+	output reg	[8:0]	h_eye_width,
+	output reg	[31:0]	h_pat_blocks,
+	output reg	[31:0]	h_pat_errors,
+	output reg	snap_req,
+	output reg	go
+);
+
+	reg [2:0] snap_a;
+	wire ack_t, pending;
+	reg window, go_capture;
+	reg [23:0] cnt0;
+	
+	// synchronizer
+	always@(posedge clk)
+		snap_a <= {snap_a[1:0],snap_ack};
+	
+	assign ack_t = snap_a[2] ^ snap_a[1];
+	assign pending = snap_req ^ snap_a[1];
+	
+	// TIMEOUT Window 
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n) begin
+			cnt0 <= 24'd0;
+			snap_req <= 1'b0;
+			window <= 1'b0;
+			h_t <= 32'd0;
+			h_lock <= 1'b0;
+			h_snap_ok <= 1'b0;
+			h_cdr_rdy <= 1'b0;
+			h_cdr_valid <= 1'b0;
+			h_phase <= 9'd0;
+			h_eye_center <= 9'd0;
+			h_eye_width <= 9'd0;
+			h_pat_blocks <= 32'd0;
+			h_pat_errors <= 32'd0;
+			go_capture <= 1'b0;
+		end
+		else begin
+			go_capture <= 1'b0;
+			if (tick) begin
+				window <= 1'b1;
+				cnt0 <= 24'd0;
+				if (!pending)
+					snap_req <= ~snap_req;
+			end
+			else if (window) begin
+				if (ack_t) begin
+					h_t <= t;
+					h_lock <= lock_sync;
+					h_snap_ok <= 1'b1;
+					h_cdr_rdy <= sh_cdr_rdy;
+					h_cdr_valid <= sh_cdr_valid;
+					h_phase <= sh_phase;
+					h_eye_center <= sh_eye_center;
+					h_eye_width <= sh_eye_width;
+					h_pat_blocks <= sh_pat_blocks;
+					h_pat_errors <= sh_pat_errors;
+					go_capture <= 1'b1;
+					window <= 1'b0;
+				end
+				else if (cnt0 == TIMEOUT-1) begin
+					h_t <= t;
+					h_lock <= lock_sync;
+					h_snap_ok <= 1'b0;
+					go_capture <= 1'b1;
+					window <= 1'b0;
+				end
+				else
+					cnt0 <= cnt0 + 1;
+			end
+		end
+	
+	
+	// go register
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			go <= 1'b0;
+		else
+			go <= go_capture;
+
+
+endmodule
+
+
+
+
+
+
+
+
+
+
+
+module pat_monitor (
+	input  wire rst_n,
+	input  wire	wclk,
+	input  wire	valid,
+	input  wire	[7:0] din,
+	input  wire	[2:0] pos,
+	output reg	[31:0] pat_blocks,
+	output reg	[31:0] pat_errors
+);
+	
+	// parameters
+	localparam FRAME_B0 = 8'hA5;
+	localparam FRAME_B1 = 8'h5A;
+	localparam FRAME_B2 = 8'hA5;
+	localparam FRAME_B3 = 8'h5A;
+	localparam FRAME_B6 = 8'h01;
+	localparam FRAME_B7 = 8'h80;
+	
+	// reg & wire
+	reg [2:0] pos_reg;
+	reg [15:0] c_reg, cnt_e;
+	wire [15:0] c;
+	reg inblk, byte_err, c_err, have_e;
+	wire blk_err, cnt_bad;
+	reg [7:0] c_hi, c_lo;
+	reg rst_w2, rst_w1;
+	
+	
+	// reset pulse synchronizer - async rst_n
+	always@(negedge rst_n or posedge wclk)
+		if (!rst_n) begin
+			rst_w1 <= 1'b0;
+			rst_w2 <= 1'b0;
+		end
+		else begin
+			rst_w1 <= 1'b1;
+			rst_w2 <= rst_w1;
+		end
+	
+	
+	always@(negedge rst_w2 or posedge wclk)
+		if (!rst_w2) begin
+			pat_blocks <= 32'd0;
+			pat_errors <= 32'd0;
+			inblk <= 1'b0;
+			byte_err <= 1'b0;
+			c_lo <= 8'd0;
+			c_hi <= 8'd0;
+			c_err <= 1'b0;
+			have_e <= 1'b0;
+			pos_reg <= 3'd0;
+			c_reg <= 16'd0;
+			cnt_e <= 16'd0;
+		end
+		else if (valid) begin
+			pos_reg <= pos;
+			if (pos == 3'd7)
+				c_reg <= c;
+				
+			if (pos == 3'd0) begin
+				inblk <= 1'b1;
+				byte_err <= (FRAME_B0 != din);
+			end
+			else if (pos == 3'd1) begin
+				byte_err <= byte_err | (FRAME_B1 != din);
+				if (pos-pos_reg != 3'd1) inblk <= 0;
+			end
+			else if (pos == 3'd2) begin
+				byte_err <= byte_err | (FRAME_B2 != din);
+				if (pos-pos_reg != 3'd1) inblk <= 0;
+			end
+			else if (pos == 3'd3) begin
+				byte_err <= byte_err | (FRAME_B3 != din);
+				if (pos-pos_reg != 3'd1) inblk <= 0;
+			end
+			else if (pos == 3'd4) begin
+				c_lo <= din;
+				if (pos-pos_reg != 3'd1) inblk <= 0;
+			end
+			else if (pos == 3'd5) begin
+				c_hi <= din;
+				if (pos-pos_reg != 3'd1) inblk <= 0;
+			end
+			else if (pos == 3'd6) begin
+				byte_err <= byte_err | (FRAME_B6 != din);
+				if (pos-pos_reg != 3'd1) inblk <= 0;
+			end
+			else if ( (pos == 3'd7) && inblk ) begin
+				
+				if (pat_blocks != 32'hffffffff) begin
+					pat_blocks <= pat_blocks + 1;
+					if ( blk_err || cnt_bad )
+						pat_errors <= pat_errors + 1;
+				end
+				
+				if (!have_e) begin
+					cnt_e <= c;
+					have_e <= 1'b1;
+				end
+				else begin
+					if ( cnt_bad && !blk_err && c_err && (c == c_reg + 16'd1) ) begin
+						cnt_e <= c;
+						c_err <= 1'b0;
+					end
+					else begin
+						cnt_e <= cnt_e + 16'd1;
+						c_err <= cnt_bad && !blk_err;
+					end
+				end
+				
+			end
+		end
+		else begin
+			inblk <= 1'b0;
+			pos_reg <= 3'd0;
+			have_e <= 1'b0;
+			c_err <= 1'b0;
+		end
+	
+	assign c = {c_hi,c_lo};
+	assign blk_err = (byte_err | (FRAME_B7 != din));
+	assign cnt_bad = have_e && (c != cnt_e + 16'd1);
+	
+	
+endmodule
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+module console_fmt #(
+	parameter MODE_PATTERN = 1'b1
+)(
+	input  wire	clk,
+	input  wire	rst_n,
+	input  wire	go,
+	input  wire	[31:0]	t,
+	input  wire	lock,
+	input  wire	snap_ok,
+	input  wire	cdr_rdy,
+	input  wire	cdr_valid,
+	input  wire	[8:0]	phase,
+	input  wire	[8:0]	eye_center,
+	input  wire	[8:0]	eye_width,
+	input  wire	[31:0]	pat_blocks,
+	input  wire	[31:0]	pat_errors,
+	input  wire	uart_rdy,
+	output reg	uart_start,
+	output reg	[7:0]	uart_data,
+	output reg	busy
+);
+	
+	localparam IDLE = 3'd0;
+	localparam GET_CHAR = 3'd1;
+	localparam TRANSMIT = 3'd2;
+	localparam DECODE_BIN = 3'd3;
+	localparam TRANSMIT_BIN = 3'd4;
+	localparam NEXT_CHAR = 3'd5;
+	localparam SEND_DIG = 3'd6;
+	
+	reg [2:0] current_state, next_state;
+	
+	localparam LINE_CHAR = 8'd128;
+	
+	localparam [LINE_CHAR*8-1:0] LINE = {"CMP t=", 8'h80, " link=- lock=", 8'h81, " ph=", 8'h82,
+          "/336 eye=", 8'h83, "/", 8'h84, " mode=", 8'h89, " rx=", 8'h85, " crc=", 8'h86,
+          " sent=- rep=- skip=- gap=- down=- hw=- mm=- design=- flags=- snap=", 8'h87,
+          " *", 8'h88, 8'h0D, 8'h0A};
+	
+	
+	reg uart_data_en, cnt0_en, cnt0_rst, cnt1_rst, cnt1_en, rst_sync;
+	reg [7:0] cnt0;
+	reg [3:0] cnt1;
+	
+	
+	// Line-Char counter
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			cnt0 <= 8'd0;
+		else if (cnt0_rst == 1'b1)
+			cnt0 <= 8'd0;
+		else if (cnt0_en == 1'b1)
+			cnt0 <= cnt0 + 8'd1;
+	
+	wire bin2dec_rdy;
+	wire [3:0] bin2dec_len;
+	reg bin2dec_start;
+	
+	reg [31:0] uart_data_bin;
+	wire [39:0] uart_data_dec;
+	reg [55:0] uart_data_text;
+	reg [3:0] uart_data_text_len;
+	reg [7:0] uart_data_mux, uart_data_char, chksum;
+	wire [15:0] chksum_hexc;
+	reg [1:0] uart_data_sel;
+	wire [8:0] eye_center_val, eye_width_val;
+	
+	
+	// dec-length counter
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			cnt1 <= 4'd15;
+		else if (cnt1_rst == 1'b1)
+			if (uart_data_sel == 2'd2)
+				cnt1 <= bin2dec_len-1;
+			else
+				cnt1 <= uart_data_text_len-1;
+		else if (cnt1_en == 1'b1)
+			cnt1 <= cnt1 - 4'd1;
+	
+	
+	bin2dec dec0 (
+		.rst_n	(rst_n),
+		.clk	(clk),
+		.din	(uart_data_bin),	// input in binary
+		.start	(bin2dec_start),
+		.dout	(uart_data_dec),		// output in decimal
+		.len	(bin2dec_len),		// output: length of decimal
+		.rdy	(bin2dec_rdy)
+	);
+	
+	
+	
+	assign eye_center_val =	(cdr_valid)	?	eye_center : 9'd0;
+	assign eye_width_val =	(cdr_valid)	?	eye_width : 9'd0;
+	
+	
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n) begin
+			uart_data_sel <= 2'd0;
+			uart_data_bin <= 32'd0;
+			uart_data_text <= 40'd0;
+			uart_data_text_len <= 4'd0;
+		end
+		else if (rst_sync) begin
+			uart_data_sel <= 2'd0;
+			uart_data_bin <= 32'd0;
+			uart_data_text <= 40'd0;
+			uart_data_text_len <= 4'd0;
+		end
+		else if (uart_data_en) begin
+			if 		( LINE[LINE_CHAR*8-1 - (cnt0 * 8) -: 8] == "\200" )	begin
+				uart_data_bin <= t;
+				uart_data_sel <= 2'd2;
+			end
+			else if	( LINE[LINE_CHAR*8-1 - (cnt0 * 8) -: 8] == "\201" )	begin
+				uart_data_bin <= {31'd0, lock};
+				uart_data_sel <= 2'd2;
+			end
+			else if	( LINE[LINE_CHAR*8-1 - (cnt0 * 8) -: 8] == "\202" )	begin
+				uart_data_bin <= {23'd0, phase};
+				uart_data_sel <= 2'd2;
+			end
+			else if	( LINE[LINE_CHAR*8-1 - (cnt0 * 8) -: 8] == "\203" )	begin
+				if (!cdr_rdy) begin
+					uart_data_text <= "---";
+					uart_data_text_len <= 4'd3;
+					uart_data_sel <= 2'd3;
+				end
+				else begin
+					uart_data_bin <= {23'd0, eye_center_val};
+					uart_data_sel <= 2'd2;
+				end
+			end
+			else if	( LINE[LINE_CHAR*8-1 - (cnt0 * 8) -: 8] == "\204" )	begin
+				if (!cdr_rdy) begin
+					uart_data_text <= "---";
+					uart_data_text_len <= 4'd3;
+					uart_data_sel <= 2'd3;
+				end
+				else begin
+					uart_data_bin <= {23'd0, eye_width_val};
+					uart_data_sel <= 2'd2;
+				end
+			end
+			else if	( LINE[LINE_CHAR*8-1 - (cnt0 * 8) -: 8] == "\205" )	begin
+				uart_data_bin <= pat_blocks;
+				uart_data_sel <= 2'd2;
+			end
+			else if	( LINE[LINE_CHAR*8-1 - (cnt0 * 8) -: 8] == "\206" )	begin
+				uart_data_bin <= pat_errors;
+				uart_data_sel <= 2'd2;
+			end
+			else if	( LINE[LINE_CHAR*8-1 - (cnt0 * 8) -: 8] == "\207" )	begin
+				if (snap_ok) begin
+					uart_data_text <= "ok";
+					uart_data_text_len <= 4'd2;
+				end
+				else begin
+					uart_data_text <= "stale";
+					uart_data_text_len <= 4'd5;
+				end
+				uart_data_sel <= 2'd3;
+			end
+			else if	( LINE[LINE_CHAR*8-1 - (cnt0 * 8) -: 8] == 8'h89 )	begin
+				if (MODE_PATTERN) begin
+					uart_data_text <= "pattern";
+					uart_data_text_len <= 4'd7;
+				end
+				else begin
+					uart_data_text <= "frames";
+					uart_data_text_len <= 4'd6;
+				end
+				uart_data_sel <= 2'd3;
+			end
+			else if	( LINE[LINE_CHAR*8-1 - (cnt0 * 8) -: 8] == "\210" )	begin
+				uart_data_text <= { 40'd0, chksum_hexc };
+				uart_data_text_len <= 4'd2;
+				uart_data_sel <= 2'd3;
+			end
+			else
+				uart_data_sel <= 2'd1;
+		end
+	
+	always@(*) begin
+		case (uart_data_sel)
+			2'd0: uart_data = 8'd0;
+			2'd1: uart_data = LINE[LINE_CHAR*8-1 - (cnt0 * 8) -: 8];
+			2'd2: uart_data = uart_data_mux;
+			2'd3: uart_data = uart_data_char;
+			default: uart_data = 8'd0;
+		endcase
+	end
+
+	// checksum
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			chksum <= 8'd0;
+		else if (rst_sync)
+			chksum <= 8'd0;
+		else if ( (uart_start) && (cnt0 < LINE_CHAR-4) )
+			chksum <= chksum ^ uart_data;
+	// hexc: char-to-hex decoder
+	assign chksum_hexc[15:8] = (chksum[7:4] < 4'd10) ? 8'h30 + chksum[7:4] : 8'h37 + chksum[7:4];
+	assign chksum_hexc[7:0] = (chksum[3:0] < 4'd10) ? 8'h30 + chksum[3:0] : 8'h37 + chksum[3:0];
+
+	
+	always@(*) begin
+		case (cnt1)
+			4'd0: uart_data_mux = 8'h30 + { 4'd0, uart_data_dec[3:0] };
+			4'd1: uart_data_mux = 8'h30 + { 4'd0, uart_data_dec[7:4] };
+			4'd2: uart_data_mux = 8'h30 + { 4'd0, uart_data_dec[11:8] };
+			4'd3: uart_data_mux = 8'h30 + { 4'd0, uart_data_dec[15:12] };
+			4'd4: uart_data_mux = 8'h30 + { 4'd0, uart_data_dec[19:16] };
+			4'd5: uart_data_mux = 8'h30 + { 4'd0, uart_data_dec[23:20] };
+			4'd6: uart_data_mux = 8'h30 + { 4'd0, uart_data_dec[27:24] };
+			4'd7: uart_data_mux = 8'h30 + { 4'd0, uart_data_dec[31:28] };
+			4'd8: uart_data_mux = 8'h30 + { 4'd0, uart_data_dec[35:32] };
+			4'd9: uart_data_mux = 8'h30 + { 4'd0, uart_data_dec[39:36] };
+			default: uart_data_mux = 8'd0;
+		endcase
+	end	
+	
+	
+	always@(*) begin
+		case (cnt1)
+			4'd0: uart_data_char = uart_data_text[7:0];
+			4'd1: uart_data_char = uart_data_text[15:8];
+			4'd2: uart_data_char = uart_data_text[23:16];
+			4'd3: uart_data_char = uart_data_text[31:24];
+			4'd4: uart_data_char = uart_data_text[39:32];
+			4'd5: uart_data_char = uart_data_text[47:40];
+			4'd6: uart_data_char = uart_data_text[55:48];
+			default: uart_data_char = 8'd0;
+		endcase
+	end	
+	
+	
+	
+	
+	// FSM
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			current_state <= IDLE;
+		else
+			current_state <= next_state;
+	
+	always@(*) begin
+		// default
+		uart_start = 1'b0;
+		busy = 1'b0;
+		uart_data_en = 1'b0;
+		cnt0_rst = 1'b0;
+		cnt0_en = 1'b0;
+		bin2dec_start = 1'b0;
+		cnt1_rst = 1'b0;
+		cnt1_en = 1'b0;
+		rst_sync = 1'b0;
+		
+		case (current_state)
+			IDLE: begin
+				if (go) begin
+					next_state = GET_CHAR;
+					uart_data_en = 1'b1;
+				end
+				else begin
+					next_state = IDLE;
+					rst_sync = 1'b1;
+				end
+				cnt0_rst = 1'b1;
+				cnt1_rst = 1'b1;
+			end
+			
+			GET_CHAR: begin
+				if ( LINE[LINE_CHAR*8-1 - (cnt0 * 8) -: 8] >= "\200" ) begin
+					if (uart_data_sel==2'd3) begin
+						next_state = SEND_DIG;
+						cnt1_rst = 1'b1; // load cnt1
+					end
+					else begin
+						next_state = DECODE_BIN;
+						bin2dec_start = 1'b1;
+					end
+				end
+				else begin
+					if ( (cnt0 == LINE_CHAR-1) && uart_rdy ) begin
+						next_state = IDLE;
+						uart_start = 1'b1;
+					end
+					else if (uart_rdy) begin
+						next_state = TRANSMIT;
+						uart_start = 1'b1;
+					end
+					else
+						next_state = GET_CHAR;
+				end
+				busy = 1'b1;
+			end
+			
+			DECODE_BIN: begin
+				if (bin2dec_rdy) begin
+					next_state = SEND_DIG;
+					cnt1_rst = 1'b1; // len is valid while bin2dec_rdy = 1'b1
+				end
+				else
+					next_state = DECODE_BIN;
+				busy = 1'b1;
+			end
+			
+			SEND_DIG: begin
+				if (uart_rdy) begin
+					next_state = TRANSMIT_BIN;
+					uart_start = 1'b1;
+				end
+				else
+					next_state = SEND_DIG;
+				busy = 1'b1;
+			end
+			TRANSMIT_BIN: begin
+				if ( (cnt1 == 4'd0) && (uart_rdy) ) begin
+					next_state = NEXT_CHAR;
+					cnt0_en = 1'b1;
+				end
+				else if (uart_rdy) begin
+					next_state = SEND_DIG;
+					cnt1_en = 1'b1;
+				end
+				else
+					next_state = TRANSMIT_BIN;
+				busy = 1'b1;
+			end
+
+
+			TRANSMIT: begin
+				if (uart_rdy) begin
+					next_state = NEXT_CHAR;
+					cnt0_en = 1'b1;
+				end
+				else
+					next_state = TRANSMIT;
+				busy = 1'b1;
+			end
+			
+			NEXT_CHAR: begin
+				next_state = GET_CHAR;
+				uart_data_en = 1'b1;
+				busy = 1'b1;
+			end
+			
+			default: begin
+				next_state = IDLE;
+			end
+		endcase
+	end
+	
+	
+	
+	
+endmodule
+
+
+
+
+module bin2dec (
+	input  wire	rst_n,
+	input  wire	clk,
+	input  wire	[31:0]	din,	// input in binary
+	input  wire	start,
+	output reg	[39:0]	dout,		// output in decimal
+	output reg	[3:0]	len,		// output: length of decimal
+	output wire	rdy
+);
+
+	localparam IDLE = 2'd0;
+	localparam DECODE = 2'd1;
+	
+	reg [1:0] current_state, next_state;
+	
+	localparam NBITS = 8'd32;
+	
+	reg [31:0] din_reg;
+	reg [7:0] cnt0;
+	reg din_load, din_en, cnt0_en, rst_sync, dout_en;
+	
+	// input shift register
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			din_reg <= 32'b0;
+		else
+			if (din_load)
+				din_reg <= din;
+			else if (din_en)
+				din_reg <= { din_reg[30:0], 1'b0 };
+	
+	reg [3:0] dig0, dig1, dig2, dig3, dig4, dig5, dig6, dig7, dig8, dig9;
+	
+	// BCD digit check
+	always@(*) begin
+		if ( dout[3:0] >= 4'd5 ) dig0 = dout[3:0] + 4'd3; else dig0 = dout[3:0];
+		if ( dout[7:4] >= 4'd5 ) dig1 = dout[7:4] + 4'd3; else dig1 = dout[7:4];
+		if ( dout[11:8] >= 4'd5 ) dig2 = dout[11:8] + 4'd3; else dig2 = dout[11:8];
+		if ( dout[15:12] >= 4'd5 ) dig3 = dout[15:12] + 4'd3; else dig3 = dout[15:12];
+		if ( dout[19:16] >= 4'd5 ) dig4 = dout[19:16] + 4'd3; else dig4 = dout[19:16];
+		if ( dout[23:20] >= 4'd5 ) dig5 = dout[23:20] + 4'd3; else dig5 = dout[23:20];
+		if ( dout[27:24] >= 4'd5 ) dig6 = dout[27:24] + 4'd3; else dig6 = dout[27:24];
+		if ( dout[31:28] >= 4'd5 ) dig7 = dout[31:28] + 4'd3; else dig7 = dout[31:28];
+		if ( dout[35:32] >= 4'd5 ) dig8 = dout[35:32] + 4'd3; else dig8 = dout[35:32];
+		if ( dout[39:36] >= 4'd5 ) dig9 = dout[39:36] + 4'd3; else dig9 = dout[39:36];
+	end
+	
+	// output shift register
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			dout <= 40'd0;
+		else
+			if (rst_sync)
+				dout <= 40'd0;
+			else if (dout_en)
+				dout <= { dig9[2:0], dig8, dig7, dig6, dig5, dig4, dig3, dig2, dig1, dig0, din_reg[31] };
+	
+	// iteration counter = #bits of din
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			cnt0 <= 8'd0;
+		else if (rst_sync == 1'b1)
+			cnt0 <= 8'd0;
+		else if (cnt0 == NBITS-1)
+			cnt0 <= 8'd0;
+		else if (cnt0_en)
+			cnt0 <= cnt0 + 8'd1;
+	
+	
+	// len register
+	always@(*) begin
+		len = 4'd1;
+		if 		(dout[39:36] != 4'd0)	len = 4'd10;
+		else if (dout[35:32] != 4'd0)	len = 4'd9;
+		else if (dout[31:28] != 4'd0)	len = 4'd8;
+		else if (dout[27:24] != 4'd0)	len = 4'd7;
+		else if (dout[23:20] != 4'd0)	len = 4'd6;
+		else if (dout[19:16] != 4'd0)	len = 4'd5;
+		else if (dout[15:12] != 4'd0)	len = 4'd4;
+		else if (dout[11:8] != 4'd0)		len = 4'd3;
+		else if (dout[7:4] != 4'd0)		len = 4'd2;
+	end
+	
+	
+	// rdy logic
+	assign rdy = (current_state == IDLE);
+	
+	// FSM
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			current_state <= IDLE;
+		else
+			current_state <= next_state;
+	
+	always@(*) begin
+		// default
+		cnt0_en = 1'b0;
+		din_load = 1'b0;
+		din_en = 1'b0;
+		rst_sync = 1'b0;
+		dout_en = 1'b0;
+		
+		case (current_state)
+			IDLE: begin
+				if (start) begin
+					next_state = DECODE;
+					din_load = 1'b1;
+					rst_sync = 1'b1;
+				end
+				else
+					next_state = IDLE;
+			end
+			
+			DECODE: begin
+				if ( (cnt0 == NBITS-1) ) begin
+					next_state = IDLE;
+				end
+				else begin
+					next_state = DECODE;
+					cnt0_en = 1'b1;
+				end	
+				din_en = 1'b1;
+				dout_en = 1'b1;
+			end
+			
+			default: begin
+				next_state = IDLE;
+			end
+		endcase
+	end
+
+
+endmodule
+
+
+
+
+
+
+
+
+
+module console_uart(
+	input  wire	clk,				// clkin (12 MHz)
+	input  wire	rst_n,
+	input  wire	start,
+	input  wire	[7:0]	data_tx,
+	output reg	con_tx,
+	output wire	rdy
+);
+
+	// UART: 115,200 8N1. LSB First, Start Bit 0, Stop bit 1
+	
+	localparam IDLE = 2'd0;
+	localparam TRANSMIT = 2'd1;
+	
+	reg [1:0] current_state, next_state;
+	
+	localparam BIT_TIMING_MAX = 8'd104;
+	localparam BIT_MAX = 4'd10;
+	reg d_tx_load, d_tx_en, cnt1_en, rst_sync;
+	reg [3:0] cnt1;
+	wire [3:0] con_tx_sel;
+	reg [7:0] cnt0, d_tx;
+	
+	// shift register
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			d_tx <= 8'b0;
+		else
+			if (d_tx_load)
+				d_tx <= data_tx;
+			else if (d_tx_en)
+				d_tx <= { 1'b1, d_tx[7:1] };
+		
+	// output
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			con_tx <= 1'b1;
+		else if (current_state == TRANSMIT) begin
+			if (con_tx_sel == 4'd0)
+				con_tx <= 1'b0;
+			else if ( (con_tx_sel > 4'd0) && (con_tx_sel < 4'd9) )
+				con_tx <= d_tx[0];
+			else if (con_tx_sel == 4'd9)
+				con_tx <= 1'b1;
+		end
+		else
+			con_tx <= 1'b1;
+	
+	assign con_tx_sel = cnt1;
+		
+	// bit counter
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			cnt1 <= 4'd0;
+		else if (rst_sync == 1'b1)
+			cnt1 <= 4'd0;
+		else if (cnt1_en == 1'b1)
+			if (cnt1 == BIT_MAX-1)
+				cnt1 <= 4'd0;
+			else
+				cnt1 <= cnt1 + 4'd1;
+	
+	// bit-timing counter
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			cnt0 <= 8'd0;
+		else if (rst_sync == 1'b1)
+			cnt0 <= 8'd0;
+		else if (cnt0 == BIT_TIMING_MAX-1)
+			cnt0 <= 8'd0;
+		else
+			cnt0 <= cnt0 + 8'd1;
+	
+	
+	// rdy logic
+	assign rdy = (current_state == IDLE);
+	
+				
+	// FSM
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			current_state <= IDLE;
+		else
+			current_state <= next_state;
+	
+	always@(*) begin
+		// default
+		cnt1_en = 1'b0;
+		d_tx_load = 1'b0;
+		d_tx_en = 1'b0;
+		rst_sync = 1'b0;
+		
+		case (current_state)
+			IDLE: begin
+				if (start) begin
+					next_state = TRANSMIT;
+					d_tx_load = 1'b1;
+					
+				end
+				else
+					next_state = IDLE;
+				rst_sync = 1'b1;
+			end
+			
+			TRANSMIT: begin
+				if ( (cnt1 == BIT_MAX-1) && (cnt0 == BIT_TIMING_MAX-1) ) begin
+					next_state = IDLE;
+				end
+				else if (cnt0 == BIT_TIMING_MAX-1) begin
+					next_state = TRANSMIT;
+					cnt1_en = 1'b1;
+				end
+				else
+					next_state = TRANSMIT;
+				
+				if ( (con_tx_sel > 4'd0) && (con_tx_sel < 4'd9) && (cnt0 == BIT_TIMING_MAX-1) )
+					d_tx_en = 1'b1;
+			end
+			
+			default: begin
+				next_state = IDLE;
+			end
+		endcase
+	end
+
+endmodule
 
 
 
@@ -662,7 +1952,11 @@ module cdr (
 	output reg	[8:0] meas_phase,
 	output reg	meas_no_lock,
 	output reg	[15:0] meas_errors,
-	output reg	meas_en
+	output reg	meas_en,
+	// to pat_monitor
+	output reg	[8:0] phase,
+	output wire	[7:0] dout,
+	output wire	[2:0] pos
 );
 	
 	// parameters
@@ -672,7 +1966,6 @@ module cdr (
 	
 	// wire & reg
 	wire phase_en;
-	reg [8:0] phase;
 	reg [8:0] cur_start, cur_len, best_start, best_len, first_len;
 	
 	wire aligner_rst, aligner_rdy;
@@ -690,6 +1983,11 @@ module cdr (
 	wire pll_phasestep;
 	reg pll_phasestep_reg;
 	reg lock_sync, lock_reg;
+	
+	
+	assign dout = aligner_dout;
+	assign pos = aligner_pos[2:0]; // specific for FRAME_LENGTH = 7, see frame_aligner
+	
 	
 	// 9-bit counter for phase
 	always@(posedge wclk)

@@ -109,4 +109,51 @@ with tempfile.TemporaryDirectory() as d:
     assert "bad line" in out.getvalue()
 print("pass  process: bad lines counted, not logged; CSV has every field")
 
+
+# _serial_lines: a silent port, bytes without a line end, recovery.
+from companion_console import _serial_lines  # noqa: E402
+
+
+class FakePort:
+    """read() returns the next scripted chunk; each read takes 0.5 s."""
+    port = "/dev/fake"
+
+    def __init__(self, chunks, clk):
+        self.chunks, self.clk = list(chunks), clk
+
+    def read(self, n):
+        self.clk[0] += 0.5
+        return self.chunks.pop(0) if self.chunks else b""
+
+
+def run_port(chunks, seconds):
+    clk = [1000.0]
+    out = io.StringIO()
+    port = FakePort(chunks, clk)
+    lines = list(_serial_lines(port, deadline=1000.0 + seconds, out=out,
+                               clock=lambda: clk[0]))
+    return lines, out.getvalue().splitlines()
+
+
+# nothing at all for 12 s: reported at 5 s and 10 s, not more often
+lines, msgs = run_port([], 12)
+assert lines == [] and len(msgs) == 2, msgs
+assert all("no bytes for" in m and "/dev/fake" in m for m in msgs)
+assert "for 5 s" in msgs[0] and "for 10 s" in msgs[1]
+
+# a good line every second: no message
+good = format_line(parse_line(EX)).encode()
+lines, msgs = run_port([good, b""] * 10, 10)
+assert len(lines) == 10 and msgs == [], msgs
+
+# garbage every second without \n (wrong baud): "no line end", not "no bytes"
+lines, msgs = run_port([b"\x80\xfe\x1c", b""] * 12, 12)
+assert lines == [] and msgs and all("bytes but no line end" in m for m in msgs), msgs
+
+# silent 6 s, then lines: one "no bytes", one "bytes again", then the line
+lines, msgs = run_port([b""] * 12 + [good], 7)
+assert len(lines) == 1 and len(msgs) == 2, msgs
+assert "no bytes" in msgs[0] and "bytes again after 6 s" in msgs[1]
+print("pass  serial reader: silent port, no line end, recovery reported")
+
 print("ALL COMPANION-CONSOLE CHECKS PASSED")

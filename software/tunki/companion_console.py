@@ -15,7 +15,9 @@ This script:
   - writes bench/companion_YYYYMMDD_HHMMSS.csv (host time + every field);
   - prints the changes worth seeing: a new CRC/pattern error, lock or link
     changes, the eye after a sweep, `snap` going stale, the adapter
-    restarting (t going backwards), `rx` stopping.
+    restarting (t going backwards), `rx` stopping;
+  - says so when the port is silent ("no bytes for 5 s"), or delivers
+    bytes but no line end (wrong baud rate), every 5 s until it recovers.
 
 The parser (`parse_line`) is the one `console_tb`'s checks are written
 against, so the bench and the simulation check the same thing.
@@ -290,16 +292,48 @@ def process(lines, logger=None, out=sys.stdout, clock=time.time, stats=None):
     return stats["good"], stats["bad"]
 
 
-def _serial_lines(port, deadline):
+QUIET_S = 5.0                # report a silent port after this long
+
+
+def _serial_lines(port, deadline, out=sys.stdout, clock=time.time, quiet=QUIET_S):
+    """Yield the port's lines. Says so on `out` when nothing arrives for
+    `quiet` seconds (and again every `quiet` s), when bytes arrive but no
+    line end (a wrong baud rate or a broken line looks like that), and when
+    bytes come back after a silence, so a silent port is never a silent
+    screen."""
     buf = b""
-    while deadline is None or time.time() < deadline:
+    last_byte = last_line = clock()     # times of the last byte, the last \n
+    warned_at = None                    # time of the last silence report
+    nbytes = 0                          # bytes since the last \n
+    silent = False                      # a "no bytes" report is standing
+    while deadline is None or clock() < deadline:
         chunk = port.read(256)
-        if not chunk:
+        now = clock()
+        stamp = dt.datetime.fromtimestamp(now).strftime("%H:%M:%S")
+        if chunk:
+            if silent:
+                print(f"{stamp} bytes again after {now - last_byte:.0f} s", file=out)
+                silent, warned_at = False, None
+            last_byte = now
+            nbytes += len(chunk)
+            buf += chunk
+            while b"\n" in buf:
+                line, buf = buf.split(b"\n", 1)
+                last_line = now
+                nbytes = len(buf)
+                warned_at = None
+                yield line.decode("ascii", errors="replace") + "\n"
+        if warned_at is not None and now - warned_at < quiet:
             continue
-        buf += chunk
-        while b"\n" in buf:
-            line, buf = buf.split(b"\n", 1)
-            yield line.decode("ascii", errors="replace") + "\n"
+        if now - last_byte >= quiet:
+            name = getattr(port, "port", None) or "the port"
+            print(f"{stamp} no bytes for {now - last_byte:.0f} s on {name} "
+                  "(FPGA programmed and sending? companion-console.md §2)", file=out)
+            silent, warned_at = True, now
+        elif nbytes and now - last_line >= quiet:
+            print(f"{stamp} {nbytes} bytes but no line end for {now - last_line:.0f} s "
+                  f"(baud rate not {BAUD_RATE}, or a broken line?)", file=out)
+            warned_at = now
 
 
 def main(argv=None):
