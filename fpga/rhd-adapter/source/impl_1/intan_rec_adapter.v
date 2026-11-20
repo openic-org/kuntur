@@ -148,7 +148,10 @@ module intan_rec_adapter (
 	);
 	
 	
-	
+	wire [8:0] phase, eye_center, eye_width;
+	wire [7:0] dout;
+	wire [2:0] pos;
+	wire [31:0] pat_blocks, pat_errors;
 	
 	// Primitive block: Edge-clock synchronizer
 	ECLKSYNC #(
@@ -197,7 +200,14 @@ module intan_rec_adapter (
 		.pll_phasedir	(pll_phasedir), // output
 		.pll_phasestep_sync	(pll_phasestep), // output
 		.rdy	(cdr_rdy),
-		.valid	(cdr_valid)
+		.valid	(cdr_valid),
+		.eye_center	(eye_center),
+		.eye_width	(eye_width),
+	
+		// to pat_monitor
+		.phase	(phase),
+		.dout	(dout),
+		.pos	(pos)
 	);
 	
 	// **********************************************************
@@ -257,6 +267,56 @@ module intan_rec_adapter (
 			spi0_data_tx_b1 <= reg_ram0_dout1_16b;
 		end
 
+
+
+
+
+	wire con_rst_n;
+
+	console_por console_por_0 (
+		.clk	(clkin),
+		.con_rst_n	(con_rst_n)
+	);
+	
+	
+	pat_monitor pat_monitor_0 (
+		// inputs
+		.rst_n	(con_rst_n),
+		.wclk	(wclk),
+		.valid	(cdr_valid),
+		.din	(dout),
+		.pos	(pos),
+		// outputs
+		.pat_blocks	(pat_blocks),
+		.pat_errors	(pat_errors)
+	);
+	
+	
+	console #(
+		.DIV (24'd12000000),
+		.TIMEOUT (24'd120000),
+		.MODE_PATTERN (1'b1)
+	) console0 (
+		// inputs
+		.clkin	(clkin),
+		.wclk	(wclk),
+		.con_rst_n	(con_rst_n),
+		.lock_sync	(lock_sync),
+		.cdr_rdy	(cdr_rdy),
+		.cdr_valid	(cdr_valid),
+		.phase	(phase),
+		.eye_center	(eye_center),
+		.eye_width	(eye_width),
+		.pat_blocks	(pat_blocks),
+		.pat_errors	(pat_errors),
+		// outputs
+		.con_tx	(con_tx)
+	);
+	
+
+
+
+
 endmodule
 
 
@@ -291,6 +351,181 @@ module console_por (
 	FD1P3DX #(.GSR("ENABLED")) ff1 ( .D(1'b1), .SP(cnt0_is_max), .CK(clk), .CD(1'b0), .Q(con_rst_n) );
 
 endmodule
+
+
+
+
+
+
+
+
+module console #(
+	parameter DIV = 24'd12000000,
+	parameter TIMEOUT = 24'd120000,
+	parameter MODE_PATTERN = 1'b1
+)(
+	input  wire	clkin,
+	input  wire	wclk,
+	input  wire	con_rst_n,
+	input  wire	lock_sync,
+	input  wire	cdr_rdy,
+	input  wire	cdr_valid,
+	input  wire	[8:0]	phase,
+	input  wire	[8:0]	eye_center,
+	input  wire	[8:0]	eye_width,
+	input  wire	[31:0]	pat_blocks,
+	input  wire	[31:0]	pat_errors,
+	output wire	con_tx
+);
+	
+	wire tick;
+	wire [31:0] t;
+	
+	wire snap_req;
+	wire sh_cdr_rdy;
+	wire sh_cdr_valid;
+	wire [8:0] sh_phase;
+	wire [8:0] sh_eye_center;
+	wire [8:0] sh_eye_width;
+	wire [31:0] sh_pat_blocks;
+	wire [31:0] sh_pat_errors;
+	wire snap_ack;
+	
+	
+	wire [31:0] h_t;
+	wire h_lock;
+	wire h_snap_ok;
+	wire h_cdr_rdy;
+	wire h_cdr_valid;
+	wire [8:0]	h_phase;
+	wire [8:0]	h_eye_center;
+	wire [8:0]	h_eye_width;
+	wire [31:0]	h_pat_blocks;
+	wire [31:0]	h_pat_errors;
+	wire go;
+	
+	
+	wire snap_ok;
+	wire uart_rdy;
+	wire uart_start;
+	wire [7:0] uart_data;
+
+	
+	
+	console_timer #(
+		.DIV (DIV)
+	) console_timer_0 (
+		.clk	(clkin),	// input
+		.rst_n	(con_rst_n),	// input
+		.tick	(tick),	// output
+		.t		(t)	// output [31:0]
+	);
+	
+	
+	console_shadow console_shadow_0 (
+		// inputs
+		.rst_n	(con_rst_n),
+		.wclk	(wclk),
+		.snap_req	(snap_req),
+		.cdr_rdy	(cdr_rdy),
+		.cdr_valid	(cdr_valid),
+		.phase	(phase),
+		.eye_center	(eye_center),
+		.eye_width	(eye_width),
+		.pat_blocks	(pat_blocks),
+		.pat_errors	(pat_errors),
+		// outputs
+		.sh_cdr_rdy	(sh_cdr_rdy),
+		.sh_cdr_valid	(sh_cdr_valid),
+		.sh_phase	(sh_phase),
+		.sh_eye_center	(sh_eye_center),
+		.sh_eye_width	(sh_eye_width),
+		.sh_pat_blocks	(sh_pat_blocks),
+		.sh_pat_errors	(sh_pat_errors),
+		.snap_ack	(snap_ack)
+	);
+	
+	
+	
+	
+	console_snap #(
+		.TIMEOUT (TIMEOUT)
+	) console_snap_0 (
+		// inputs
+		.clk	(clkin),
+		.rst_n	(con_rst_n),
+		.tick	(tick),
+		.t		(t),
+		.lock_sync	(lock_sync),
+		.snap_ack	(snap_ack),
+		.sh_cdr_rdy	(sh_cdr_rdy),
+		.sh_cdr_valid	(sh_cdr_valid),
+		.sh_phase	(sh_phase),
+		.sh_eye_center	(sh_eye_center),
+		.sh_eye_width	(sh_eye_width),
+		.sh_pat_blocks	(sh_pat_blocks),
+		.sh_pat_errors	(sh_pat_errors),
+		// outputs
+		.h_t	(h_t),
+		.h_lock	(h_lock),
+		.h_snap_ok	(h_snap_ok),
+		.h_cdr_rdy	(h_cdr_rdy),
+		.h_cdr_valid	(h_cdr_valid),
+		.h_phase	(h_phase),
+		.h_eye_center	(h_eye_center),
+		.h_eye_width	(h_eye_width),
+		.h_pat_blocks	(h_pat_blocks),
+		.h_pat_errors	(h_pat_errors),
+		.snap_req	(snap_req),
+		.go	(go)
+	);
+	
+	
+	
+	console_fmt #(
+		.MODE_PATTERN (MODE_PATTERN)
+	) console_fmt_0 (
+		// inputs
+		.clk	(clkin),
+		.rst_n	(con_rst_n),
+		.go	(go),
+		.t	(h_t),
+		.lock	(h_lock),
+		.snap_ok	(h_snap_ok),
+		.cdr_rdy	(h_cdr_rdy),
+		.cdr_valid	(h_cdr_valid),
+		.phase	(h_phase),
+		.eye_center	(h_eye_center),
+		.eye_width	(h_eye_width),
+		.pat_blocks	(h_pat_blocks),
+		.pat_errors	(h_pat_errors),
+		.uart_rdy	(uart_rdy),
+		// outputs
+		.uart_start	(uart_start),
+		.uart_data	(uart_data),
+		.busy	()
+	);
+	
+	
+	
+	
+	
+	console_uart uart0(
+		// inputs
+		.clk	(clkin),
+		.rst_n	(con_rst_n),
+		.start	(uart_start),
+		.data_tx	(uart_data),
+		// outputs
+		.con_tx	(con_tx),
+		.rdy	(uart_rdy)
+	);
+
+	
+	
+
+endmodule
+
 
 
 
@@ -541,6 +776,147 @@ endmodule
 
 
 
+module pat_monitor (
+	input  wire rst_n,
+	input  wire	wclk,
+	input  wire	valid,
+	input  wire	[7:0] din,
+	input  wire	[2:0] pos,
+	output reg	[31:0] pat_blocks,
+	output reg	[31:0] pat_errors
+);
+	
+	// parameters
+	localparam FRAME_B0 = 8'hA5;
+	localparam FRAME_B1 = 8'h5A;
+	localparam FRAME_B2 = 8'hA5;
+	localparam FRAME_B3 = 8'h5A;
+	localparam FRAME_B6 = 8'h01;
+	localparam FRAME_B7 = 8'h80;
+	
+	// reg & wire
+	reg [2:0] pos_reg;
+	reg [15:0] c_reg, cnt_e;
+	wire [15:0] c;
+	reg inblk, byte_err, c_err, have_e;
+	wire blk_err, cnt_bad;
+	reg [7:0] c_hi, c_lo;
+	reg rst_w2, rst_w1;
+	
+	
+	// reset pulse synchronizer - async rst_n
+	always@(negedge rst_n or posedge wclk)
+		if (!rst_n) begin
+			rst_w1 <= 1'b0;
+			rst_w2 <= 1'b0;
+		end
+		else begin
+			rst_w1 <= 1'b1;
+			rst_w2 <= rst_w1;
+		end
+	
+	
+	always@(negedge rst_w2 or posedge wclk)
+		if (!rst_w2) begin
+			pat_blocks <= 32'd0;
+			pat_errors <= 32'd0;
+			inblk <= 1'b0;
+			byte_err <= 1'b0;
+			c_lo <= 8'd0;
+			c_hi <= 8'd0;
+			c_err <= 1'b0;
+			have_e <= 1'b0;
+			pos_reg <= 3'd0;
+			c_reg <= 16'd0;
+			cnt_e <= 16'd0;
+		end
+		else if (valid) begin
+			pos_reg <= pos;
+			if (pos == 3'd7)
+				c_reg <= c;
+				
+			if (pos == 3'd0) begin
+				inblk <= 1'b1;
+				byte_err <= (FRAME_B0 != din);
+			end
+			else if (pos == 3'd1) begin
+				byte_err <= byte_err | (FRAME_B1 != din);
+				if (pos-pos_reg != 3'd1) inblk <= 0;
+			end
+			else if (pos == 3'd2) begin
+				byte_err <= byte_err | (FRAME_B2 != din);
+				if (pos-pos_reg != 3'd1) inblk <= 0;
+			end
+			else if (pos == 3'd3) begin
+				byte_err <= byte_err | (FRAME_B3 != din);
+				if (pos-pos_reg != 3'd1) inblk <= 0;
+			end
+			else if (pos == 3'd4) begin
+				c_lo <= din;
+				if (pos-pos_reg != 3'd1) inblk <= 0;
+			end
+			else if (pos == 3'd5) begin
+				c_hi <= din;
+				if (pos-pos_reg != 3'd1) inblk <= 0;
+			end
+			else if (pos == 3'd6) begin
+				byte_err <= byte_err | (FRAME_B6 != din);
+				if (pos-pos_reg != 3'd1) inblk <= 0;
+			end
+			else if ( (pos == 3'd7) && inblk ) begin
+				
+				if (pat_blocks != 32'hffffffff) begin
+					pat_blocks <= pat_blocks + 1;
+					if ( blk_err || cnt_bad )
+						pat_errors <= pat_errors + 1;
+				end
+				
+				if (!have_e) begin
+					cnt_e <= c;
+					have_e <= 1'b1;
+				end
+				else begin
+					if ( cnt_bad && !blk_err && c_err && (c == c_reg + 16'd1) ) begin
+						cnt_e <= c;
+						c_err <= 1'b0;
+					end
+					else begin
+						cnt_e <= cnt_e + 16'd1;
+						c_err <= cnt_bad && !blk_err;
+					end
+				end
+				
+			end
+		end
+		else begin
+			inblk <= 1'b0;
+			pos_reg <= 3'd0;
+			have_e <= 1'b0;
+			c_err <= 1'b0;
+		end
+	
+	assign c = {c_hi,c_lo};
+	assign blk_err = (byte_err | (FRAME_B7 != din));
+	assign cnt_bad = have_e && (c != cnt_e + 16'd1);
+	
+	
+endmodule
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 module console_fmt #(
 	parameter MODE_PATTERN = 1'b1
 )(
@@ -600,11 +976,13 @@ module console_fmt #(
 	reg bin2dec_start;
 	
 	reg [31:0] uart_data_bin;
-	reg [39:0] uart_data_dec;
+	wire [39:0] uart_data_dec;
 	reg [55:0] uart_data_text;
 	reg [3:0] uart_data_text_len;
 	reg [7:0] uart_data_mux, uart_data_char, chksum;
 	wire [15:0] chksum_hexc;
+	reg [1:0] uart_data_sel;
+	wire [8:0] eye_center_val, eye_width_val;
 	
 	
 	// dec-length counter
@@ -630,10 +1008,6 @@ module console_fmt #(
 		.rdy	(bin2dec_rdy)
 	);
 	
-	
-	reg [1:0] uart_data_sel;
-	
-	wire [8:0] eye_center_val, eye_width_val;
 	
 	
 	assign eye_center_val =	(cdr_valid)	?	eye_center : 9'd0;
@@ -1578,7 +1952,11 @@ module cdr (
 	output reg	[8:0] meas_phase,
 	output reg	meas_no_lock,
 	output reg	[15:0] meas_errors,
-	output reg	meas_en
+	output reg	meas_en,
+	// to pat_monitor
+	output reg	[8:0] phase,
+	output wire	[7:0] dout,
+	output wire	[2:0] pos
 );
 	
 	// parameters
@@ -1588,7 +1966,6 @@ module cdr (
 	
 	// wire & reg
 	wire phase_en;
-	reg [8:0] phase;
 	reg [8:0] cur_start, cur_len, best_start, best_len, first_len;
 	
 	wire aligner_rst, aligner_rdy;
@@ -1606,6 +1983,11 @@ module cdr (
 	wire pll_phasestep;
 	reg pll_phasestep_reg;
 	reg lock_sync, lock_reg;
+	
+	
+	assign dout = aligner_dout;
+	assign pos = aligner_pos[2:0]; // specific for FRAME_LENGTH = 7, see frame_aligner
+	
 	
 	// 9-bit counter for phase
 	always@(posedge wclk)
