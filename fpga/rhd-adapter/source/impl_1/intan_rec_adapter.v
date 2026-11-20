@@ -262,6 +262,285 @@ endmodule
 
 
 
+
+module console_por (
+	input  wire clk,
+	output wire	con_rst_n
+);
+	
+	localparam POR_CYCLES = 8'd16;
+	localparam CNT0_BITS = 5;
+	wire [CNT0_BITS-1:0] cnt0, cnt0_d;
+	wire cnt0_en, cnt0_is_max;
+	
+	genvar i;
+	
+	// cnt0 starting at 0
+	generate
+		for ( i=0; i<CNT0_BITS; i = i+1 ) begin: por_cnt0
+			FD1P3DX #(.GSR("ENABLED")) ff0 ( .D(cnt0_d[i]), .SP(cnt0_en), .CK(clk), .CD(1'b0), .Q(cnt0[i]) );
+		end
+	endgenerate
+	
+	assign cnt0_d = cnt0 + 5'd1;
+	assign cnt0_en = ~con_rst_n;
+
+
+	// con_rst_n starting at 0 for POR_CYCLES 
+	assign cnt0_is_max = (cnt0 == POR_CYCLES-1);
+	FD1P3DX #(.GSR("ENABLED")) ff1 ( .D(1'b1), .SP(cnt0_is_max), .CK(clk), .CD(1'b0), .Q(con_rst_n) );
+
+endmodule
+
+
+
+
+
+
+
+module console_timer #(
+	parameter DIV = 24'd12000000
+)(
+	input  wire clk,
+	input  wire	rst_n,
+	output reg	tick,
+	output reg	[31:0] t
+);
+	
+	reg [23:0] cnt0;
+	
+	
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n) begin
+			cnt0 <= 24'd0;
+			tick <= 1'b0;
+			t <= 32'd0;
+		end
+		else if (cnt0 == DIV-1) begin
+			cnt0 <= 24'd0;
+			tick <= 1'b1;
+			if (t < 32'hffffffff)
+				t <= t + 32'd1;
+		end
+		else begin
+			cnt0 <= cnt0 + 24'd1;
+			tick <= 1'b0;
+		end
+	
+endmodule
+
+
+
+module console_shadow (
+	input  wire	rst_n,
+	input  wire	wclk,
+	input  wire	snap_req,
+	input  wire	cdr_rdy,
+	input  wire	cdr_valid,
+	input  wire	[8:0]	phase,
+	input  wire	[8:0]	eye_center,
+	input  wire	[8:0]	eye_width,
+	input  wire	[31:0]	pat_blocks,
+	input  wire	[31:0]	pat_errors,
+	output reg	sh_cdr_rdy,
+	output reg	sh_cdr_valid,
+	output reg	[8:0]	sh_phase,
+	output reg	[8:0]	sh_eye_center,
+	output reg	[8:0]	sh_eye_width,
+	output reg	[31:0]	sh_pat_blocks,
+	output reg	[31:0]	sh_pat_errors,
+	output reg	snap_ack
+);
+
+	reg req_s1, req_s2, req_s3;
+	wire req_t;
+	reg rst_w1, rst_w2;
+	
+	
+	// reset pulse synchronizer - async rst_n
+	always@(negedge rst_n or posedge wclk)
+		if (!rst_n) begin
+			rst_w1 <= 1'b0;
+			rst_w2 <= 1'b0;
+		end
+		else begin
+			rst_w1 <= 1'b1;
+			rst_w2 <= rst_w1;
+		end
+	
+		
+	// synchronizer
+	always@(negedge rst_w2 or posedge wclk)
+		if (!rst_w2) begin
+			req_s1 <= 1'b0;
+			req_s2 <= 1'b0;
+			req_s3 <= 1'b0;
+		end
+		else begin
+			req_s1 <= snap_req;
+			req_s2 <= req_s1;
+			req_s3 <= req_s2;
+	end
+	
+	assign req_t = req_s3 ^ req_s2;
+	
+	
+	// toggle
+	always@(negedge rst_w2 or posedge wclk)
+		if (!rst_w2)
+			snap_ack <= 1'b0;
+		else if (req_t)
+			snap_ack <= ~snap_ack;
+	
+	
+	// copy
+	always@(negedge rst_w2 or posedge wclk)
+		if (!rst_w2) begin
+			sh_cdr_rdy <= 1'b0;
+			sh_cdr_valid <= 1'b0;
+			sh_phase <= 9'd0;
+			sh_eye_center <= 9'd0;
+			sh_eye_width <= 9'd0;
+			sh_pat_blocks <= 32'd0;
+			sh_pat_errors <= 32'd0;
+		end
+		else if (req_t) begin
+			sh_cdr_rdy <= cdr_rdy;
+			sh_cdr_valid <= cdr_valid;
+			sh_phase <= phase;
+			sh_eye_center <= eye_center;
+			sh_eye_width <= eye_width;
+			sh_pat_blocks <= pat_blocks;
+			sh_pat_errors <= pat_errors;
+		end
+	
+endmodule
+
+
+
+
+
+
+
+
+module console_snap #(
+	parameter TIMEOUT = 24'd120000
+)(
+	// inputs
+	input  wire	clk,
+	input  wire	rst_n,
+	input  wire	tick,
+	input  wire	[31:0] t,
+	input  wire	lock_sync,
+	input  wire	snap_ack,
+	input  wire	sh_cdr_rdy,
+	input  wire	sh_cdr_valid,
+	input  wire	[8:0]	sh_phase,
+	input  wire	[8:0]	sh_eye_center,
+	input  wire	[8:0]	sh_eye_width,
+	input  wire	[31:0]	sh_pat_blocks,
+	input  wire	[31:0]	sh_pat_errors,
+	// outputs
+	output reg	[31:0] h_t,
+	output reg	h_lock,
+	output reg	h_snap_ok,
+	output reg	h_cdr_rdy,
+	output reg	h_cdr_valid,
+	output reg	[8:0]	h_phase,
+	output reg	[8:0]	h_eye_center,
+	output reg	[8:0]	h_eye_width,
+	output reg	[31:0]	h_pat_blocks,
+	output reg	[31:0]	h_pat_errors,
+	output reg	snap_req,
+	output reg	go
+);
+
+	reg [2:0] snap_a;
+	wire ack_t, pending;
+	reg window, go_capture;
+	reg [23:0] cnt0;
+	
+	// synchronizer
+	always@(posedge clk)
+		snap_a <= {snap_a[1:0],snap_ack};
+	
+	assign ack_t = snap_a[2] ^ snap_a[1];
+	assign pending = snap_req ^ snap_a[1];
+	
+	// TIMEOUT Window 
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n) begin
+			cnt0 <= 24'd0;
+			snap_req <= 1'b0;
+			window <= 1'b0;
+			h_t <= 32'd0;
+			h_lock <= 1'b0;
+			h_snap_ok <= 1'b0;
+			h_cdr_rdy <= 1'b0;
+			h_cdr_valid <= 1'b0;
+			h_phase <= 9'd0;
+			h_eye_center <= 9'd0;
+			h_eye_width <= 9'd0;
+			h_pat_blocks <= 32'd0;
+			h_pat_errors <= 32'd0;
+			go_capture <= 1'b0;
+		end
+		else begin
+			go_capture <= 1'b0;
+			if (tick) begin
+				window <= 1'b1;
+				cnt0 <= 24'd0;
+				if (!pending)
+					snap_req <= ~snap_req;
+			end
+			else if (window) begin
+				if (ack_t) begin
+					h_t <= t;
+					h_lock <= lock_sync;
+					h_snap_ok <= 1'b1;
+					h_cdr_rdy <= sh_cdr_rdy;
+					h_cdr_valid <= sh_cdr_valid;
+					h_phase <= sh_phase;
+					h_eye_center <= sh_eye_center;
+					h_eye_width <= sh_eye_width;
+					h_pat_blocks <= sh_pat_blocks;
+					h_pat_errors <= sh_pat_errors;
+					go_capture <= 1'b1;
+					window <= 1'b0;
+				end
+				else if (cnt0 == TIMEOUT-1) begin
+					h_t <= t;
+					h_lock <= lock_sync;
+					h_snap_ok <= 1'b0;
+					go_capture <= 1'b1;
+					window <= 1'b0;
+				end
+				else
+					cnt0 <= cnt0 + 1;
+			end
+		end
+	
+	
+	// go register
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			go <= 1'b0;
+		else
+			go <= go_capture;
+
+
+endmodule
+
+
+
+
+
+
+
+
+
+
+
 module console_fmt #(
 	parameter MODE_PATTERN = 1'b1
 )(
