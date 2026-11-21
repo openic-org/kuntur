@@ -317,7 +317,570 @@ module intan_rec_adapter (
 
 
 
+	// T5
+	
+	frame_rx #(
+		.STORED_PHASE	(9'd200),
+		.LOCK_TIMEOUT	(8'd100),
+		.N_FAIL			(4'd8)
+	) frame_rx_0 (
+		// inputs
+		.rstb	(),
+		.clk	(),
+		.wclk	(),
+		.lock		(lock_sync),
+		.din		(kuntur_data),
+		.hdr_bad		(),
+		.frame_end		(),
+		.crc_ok			(),
+		.is_sample		(),
+		.frame_index	(),
+		// outputs
+		.pll_phasestep	(),
+		.pll_phasedir	(),
+		.dout		(),
+		.hdr_start	(),
+		.dout_en	(),
+		.locked		(),
+		.stepping	(),
+		.bitsel		(),
+		.relocks	()		
+	);
+	
+	
+	
+	
+	
+	
+	
+	frame_parser frame_parser_0 (
+		// inputs
+		.rst_n	(),
+		.wclk	(),
+		.stream		(),
+		.frame_start	(),
+		// outputs
+		.sample		(),
+		.config_data	(),
+		.status		(),
+		.frames_received		(),
+		.frames_crc_failed	(),
+		.frame_index	()
+	);
+
+
+
 endmodule
+
+
+
+
+
+
+
+
+
+module frame_rx #(
+	parameter	STORED_PHASE	=	9'd200,
+	parameter	LOCK_TIMEOUT	=	9'd100,
+	parameter	N_FAIL			=	4'd8
+)(
+	// inputs
+	input  wire	rstb,
+	input  wire	clk,
+	input  wire	wclk,
+	input  wire	lock,
+	input  wire	[7:0]	din,
+	input  wire	hdr_bad,
+	input  wire	frame_end,
+	input  wire	crc_ok,
+	input  wire	is_sample,
+	input  wire	[31:0]	frame_index,
+	// outputs
+	output reg	pll_phasestep,
+	output wire	pll_phasedir,
+	output wire	[7:0]	dout,
+	output reg	hdr_start,
+	output reg	dout_en,
+	output reg	locked,
+	output wire	stepping,
+	output reg	[2:0]	bitsel,
+	output reg	[31:0]	relocks		
+);
+
+	
+	// parameters
+	localparam PREAMBLE = 32'h5AA55AA5;
+	localparam FRAME_LENGTH = 9'd380;
+	localparam SEARCH_LENGTH = 9'd390; // > frame_length + 2 (bit-shifter) + 4 (preamble)
+	
+	// state
+	localparam IDLE = 4'd0;
+	localparam PHASE_STEPS_HI = 4'd1;
+	localparam PHASE_STEPS_LO = 4'd2;
+	localparam WAIT = 4'd3;
+	localparam HUNT = 4'd4;
+	localparam FRAME = 4'd5;
+	localparam SEEK = 4'd6;
+	localparam op6 = 4'd7;
+	
+	// reg & wire
+	reg [3:0] current_state,next_state;
+	reg [7:0] din_reg_0,din_reg_1;
+	reg [7:0] data_sa, data_sa_reg_0, data_sa_reg_1, data_sa_reg_2, data_sa_reg_3;
+	wire data_is_preamble, bitsel_is_max;
+	reg bitsel_aligned_en, bitsel_en, rst_sync_2;
+	
+	reg [8:0] cnt0, cnt1;
+	reg cnt0_rst, cnt0_en, cnt1_rst, cnt1_en;
+	reg phasestep, phasestep_reg, phasestep_reg_1;
+	wire [2:0] bitsel_2;
+	
+	
+	
+	// phasestep reg and synchronizer
+	always@(negedge rstb or posedge wclk)
+		if (!rstb)
+			phasestep_reg <= 1'b1;
+		else
+			phasestep_reg <= phasestep;
+	
+	always@(negedge rstb or posedge clk)
+		if (!rstb) begin
+			pll_phasestep <= 1'b1;
+			phasestep_reg_1 <= 1'b1;
+		end
+		else begin
+			pll_phasestep <= phasestep_reg_1;
+			phasestep_reg_1 <= phasestep_reg;
+		end
+
+	
+	
+	// cnt0: Auxiliary counter
+	always@(posedge wclk)
+		if (cnt0_rst)
+			cnt0 <= 9'd0;
+		else if (cnt0_en)
+			cnt0 <= cnt0 + 1;
+	
+	// cnt1: Auxiliary counter
+	always@(posedge wclk)
+		if (cnt1_rst)
+			cnt1 <= 9'd0;
+		else if (cnt1_en)
+			cnt1 <= cnt1 + 1;
+	
+	
+	// pll_phasedir
+	assign pll_phasedir = 1'b0;
+	
+	// stepping
+	assign stepping = ( (current_state == PHASE_STEPS_HI) || (current_state == PHASE_STEPS_LO));
+	
+	
+	// ******************************************************
+	// SEARCH FRAME START: OFFSET and PREAMBLE - BEGIN
+	// ******************************************************
+	
+	// first register negedge clk
+	always@(negedge wclk)
+		if (rst_sync_2)
+			din_reg_0 <= 8'h00;
+		else
+			din_reg_0 <= din;
+	
+	// second register posedge
+	always@(posedge wclk)
+		if (rst_sync_2)
+			din_reg_1 <= 8'h00;
+		else
+			din_reg_1 <= din_reg_0;
+	
+	
+	reg search_bits;
+	
+	assign bitsel_2 = (search_bits) ? cnt1[2:0]:bitsel;	
+	
+	
+	// registers after bit-shift
+	always@(posedge wclk)
+		if (rst_sync_2) begin
+			data_sa_reg_0 <= 8'h00;
+			data_sa_reg_1 <= 8'h00;
+			data_sa_reg_2 <= 8'h00;
+			data_sa_reg_3 <= 8'h00;
+		end
+		else begin
+			data_sa_reg_0 <= data_sa;
+			data_sa_reg_1 <= data_sa_reg_0;
+			data_sa_reg_2 <= data_sa_reg_1;
+			data_sa_reg_3 <= data_sa_reg_2;
+		end
+	
+	// bit-shift: sample data from bitsel (offset)
+	always@(*)
+		case (bitsel_2)
+			3'd0: data_sa <= din_reg_1;
+			3'd1: data_sa <= {din_reg_0[0],din_reg_1[7:1]};
+			3'd2: data_sa <= {din_reg_0[1:0],din_reg_1[7:2]};
+			3'd3: data_sa <= {din_reg_0[2:0],din_reg_1[7:3]};
+			3'd4: data_sa <= {din_reg_0[3:0],din_reg_1[7:4]};
+			3'd5: data_sa <= {din_reg_0[4:0],din_reg_1[7:5]};
+			3'd6: data_sa <= {din_reg_0[5:0],din_reg_1[7:6]};
+			3'd7: data_sa <= {din_reg_0[6:0],din_reg_1[7]};
+			default: data_sa <= din_reg_1;
+		endcase
+	
+	
+	// compare with preamble 
+	assign data_is_preamble = ({data_sa_reg_0,data_sa_reg_1,data_sa_reg_2,data_sa_reg_3} == PREAMBLE) ? 1:0;
+	
+	
+	
+	
+	
+	// position, bitsel and data_out
+	always@(posedge wclk)
+		if (rst_sync_2) begin
+			bitsel <= 3'd0;
+			dout_en <= 1'b0;
+		end
+		else
+			if(bitsel_aligned_en) begin
+				bitsel <= bitsel_2;
+			end
+			else if (hdr_start)
+				dout_en <= 1'b1;
+			else if (frame_end || hdr_bad)
+				dout_en <= 1'b0;
+	
+	
+	assign dout = data_sa_reg_0;
+	
+	
+	
+	// ******************************************************
+	// SAVE PREVIOUS FRAME_INDEX & COUNT ERRORS/FAILS
+	// ******************************************************
+	
+	reg [31:0] frame_index_reg;
+	reg [7:0] fail_cnt;
+	reg fail_cnt_en, fail_cnt_rst, relocks_en, relocks_rst, first_sample;
+	reg locked_fsm, locked_en, hdr_start_fsm, first_sample_fsm, first_sample_en;
+	
+	// frame_index_reg
+	always@(negedge rstb or posedge wclk)
+		if (!rstb)
+			frame_index_reg <= 32'd0;
+		else if (frame_end && crc_ok && is_sample)
+			frame_index_reg <= frame_index;
+
+
+	// fail counter
+	always@(posedge wclk)
+		if (fail_cnt_rst)
+			fail_cnt <= 0;
+		else if (fail_cnt_en)
+			fail_cnt <= fail_cnt + 1;
+	
+	
+	// relocks counter
+	always@(posedge wclk)
+		if (relocks_rst)
+			relocks <= 0;
+		else if (relocks_en)
+			relocks <= relocks + 1;
+	
+	// output registers
+	always@(negedge rstb or posedge wclk)
+		if (!rstb) begin
+			hdr_start <= 1'b0;
+			locked <= 1'b0;
+			first_sample <= 1'b0;
+		end
+		else begin
+			hdr_start <= hdr_start_fsm;
+			if (locked_en)
+				locked <= locked_fsm;
+			if (first_sample_en)
+				first_sample <= first_sample_fsm;
+		end
+	
+	// ******************************************************
+	// FSM - BEGIN
+	// ******************************************************
+	
+	// state register
+	always@(posedge wclk)
+		if (!rstb)
+			current_state <= IDLE;
+		else
+			current_state <= next_state;
+	
+	// next_state logic
+	always@(*) begin
+		// default values
+		bitsel_aligned_en = 1'b0;
+		rst_sync_2 = 1'b0;		
+		
+		cnt0_rst = 1'b0;
+		cnt0_en = 1'b0;
+		cnt1_rst = 1'b0;
+		cnt1_en = 1'b0;
+		phasestep = 1'b1;
+		search_bits = 1'b0;
+		fail_cnt_rst = 1'b0;
+		fail_cnt_en = 1'b0;
+		relocks_rst = 1'b0;
+		relocks_en = 1'b0;
+		locked_fsm = 1'b0;
+		locked_en = 1'b0;
+		hdr_start_fsm = 1'b0;
+		first_sample_en = 1'b0;
+		first_sample_fsm = 1'b0;
+		
+		case (current_state)
+			IDLE: begin
+				if (lock) // checks if PLL is locked
+					if (STORED_PHASE == 0)
+						next_state = WAIT;
+					else
+						next_state = PHASE_STEPS_HI;
+				else
+					next_state = IDLE;
+				cnt0_rst = 1'b1;
+				cnt1_rst = 1'b1;
+				fail_cnt_rst = 1'b1;
+				relocks_rst = 1'b1;
+			end
+			
+			PHASE_STEPS_HI: begin
+				if (cnt0 == 9'd7) begin // cnt0 sets time phasestep = 1
+					next_state = PHASE_STEPS_LO;
+					cnt0_rst = 1'b1;
+				end
+				else begin
+					next_state = PHASE_STEPS_HI;
+					cnt0_en = 1'b1;
+				end
+				phasestep = 1'b1;
+			end
+			
+			PHASE_STEPS_LO: begin
+				if ( (cnt1 == STORED_PHASE-1) && (cnt0 == 9'd7) ) begin // cnt1 sets # of phasesteps
+					next_state = WAIT;
+					cnt0_rst = 1'b1;
+					cnt1_rst = 1'b1;
+				end
+				else if (cnt0 == 9'd7) begin // cnt0 sets time phasestep = 0
+					next_state = PHASE_STEPS_HI;
+					cnt0_rst = 1'b1;
+					cnt1_en = 1'b1;
+				end
+				else begin
+					next_state = PHASE_STEPS_LO;
+					cnt0_en = 1'b1;
+				end
+				phasestep = 1'b0;
+			end
+			
+			
+			WAIT: begin
+				if (cnt0 == 9'd7) begin // cnt0 sets waiting time
+					next_state = HUNT;
+					cnt0_rst = 1'b1;
+					cnt1_rst = 1'b1;
+					rst_sync_2 = 1'b1;
+					fail_cnt_rst = 1'b1;
+					first_sample_fsm = 1'b0;
+					first_sample_en = 1'b1;
+				end
+				else begin
+					next_state = WAIT;
+					cnt0_en = 1'b1;
+				end
+			end
+			
+			
+			HUNT: begin
+				search_bits = 1'b1;
+				if (!lock) begin // checks if PLL is locked
+					next_state = HUNT;
+					locked_fsm = 1'b0; // clears 'locked'
+					locked_en = 1'b1;
+					cnt0_rst = 1'b1;
+					cnt1_rst = 1'b1;
+					fail_cnt_rst = 1'b1;
+					relocks_en = locked;
+				end
+				else if (data_is_preamble) begin
+					next_state = FRAME; // PREAMBLE found
+					bitsel_aligned_en = 1'b1;
+					hdr_start_fsm = 1'b1;
+				end
+				else if (cnt0 == SEARCH_LENGTH) begin // cnt0 is the length of the search window
+					if (cnt1 == 9'd7) begin // cnt1 is the 8 different offsets
+						next_state = HUNT; // PREAMBLE not found
+						cnt0_rst = 1'b1;
+						cnt1_rst = 1'b1;
+					end
+					else begin
+						next_state = HUNT;
+						cnt1_en = 1'b1;	// next bitsel
+						rst_sync_2 = 1'b1;	// clear window and shit registers
+						cnt0_rst = 1'b1;// clear window and shit registers
+					end
+				end
+				else begin
+					next_state = HUNT;
+					cnt0_en = 1'b1;
+				end
+			end
+			
+			
+			FRAME: begin
+				cnt0_en = 1'b1; // cnt0 is counting LOCK_TIMEOUT
+				next_state = FRAME;
+				
+				if (!lock) begin // checks if PLL is locked
+					next_state = HUNT;
+					locked_fsm = 1'b0; // clears 'locked'
+					locked_en = 1'b1;
+					cnt0_rst = 1'b1;
+					cnt1_rst = 1'b1;
+					fail_cnt_rst = 1'b1;
+					relocks_en = locked;
+					first_sample_fsm = 1'b0;
+					first_sample_en = 1'b1;
+				end
+				else if ( hdr_bad || (frame_end && !crc_ok) ) begin
+					next_state = HUNT;
+					cnt0_rst = 1'b1;
+					cnt1_rst = 1'b1;
+					first_sample_fsm = 1'b0;
+					first_sample_en = 1'b1;
+					if (locked) begin
+						if (fail_cnt == N_FAIL-1) begin
+							relocks_en = 1'b1;
+							next_state = HUNT;
+							locked_fsm = 1'b0; // clears 'locked'
+							locked_en = 1'b1;
+							fail_cnt_rst = 1'b1; // resets fail counter
+							first_sample_fsm = 1'b0;
+							first_sample_en = 1'b1;
+						end
+						else begin
+							fail_cnt_en = 1'b1;
+							next_state = SEEK;
+							first_sample_fsm = 1'b0;
+							first_sample_en = 1'b0;
+						end
+					end
+				end
+				else if ( frame_end && crc_ok && is_sample ) begin
+					// GOOD SAMPLE
+					if (frame_index == frame_index_reg +1) begin
+						if (first_sample) begin
+							locked_fsm = 1'b1;
+							locked_en = 1'b1;
+						end
+						next_state = SEEK;
+						cnt0_rst = 1'b1;
+						cnt1_rst = 1'b1;
+					end
+					else begin
+						next_state = SEEK;
+						cnt0_rst = 1'b1;
+						cnt1_rst = 1'b1;
+					end
+					if (!first_sample) begin
+						first_sample_fsm = 1'b1;
+						first_sample_en = 1'b1;
+					end
+					if (locked)
+						fail_cnt_rst = 1'b1;
+				end
+				else if ( frame_end && crc_ok && !is_sample ) begin
+					next_state = SEEK;
+					cnt0_rst = 1'b1;
+					cnt1_rst = 1'b1;
+				end
+			end
+			
+			
+			SEEK: begin
+				cnt1_en = 1'b1;
+				
+				if (!lock) begin // checks if PLL is locked
+					next_state = HUNT;
+					locked_fsm = 1'b0; // clears 'locked'
+					locked_en = 1'b1;
+					cnt0_rst = 1'b1;
+					cnt1_rst = 1'b1;
+					fail_cnt_rst = 1'b1;
+					relocks_en = locked;
+					first_sample_fsm = 1'b0;
+					first_sample_en = 1'b1;
+				end
+				else if (data_is_preamble) begin
+					next_state = FRAME; // PREAMBLE found
+					hdr_start_fsm = 1'b1;
+				end
+				else if (cnt0 == LOCK_TIMEOUT) begin // cnt0 is counting frames
+					next_state = HUNT;
+					cnt0_rst = 1'b1;// clear window and shit registers
+					locked_fsm = 1'b0; // clears 'locked'
+					locked_en = 1'b1;
+					fail_cnt_rst = 1'b1; // resets fail counter
+				end
+				else begin
+					next_state = SEEK;
+					if (cnt1 == FRAME_LENGTH-1) begin // cnt1 is counting frame_length
+						cnt0_en = 1'b1;
+						cnt1_rst = 1'b1;
+						if (locked) begin
+							if (fail_cnt == N_FAIL-1) begin
+								relocks_en = 1'b1;
+								next_state = HUNT;
+								locked_fsm = 1'b0; // clears 'locked'
+								locked_en = 1'b1;
+								fail_cnt_rst = 1'b1; // resets fail counter
+							end
+							else begin
+								fail_cnt_en = 1'b1;
+								next_state = SEEK;
+							end
+						end
+						
+					end
+				end
+			end
+			
+			// Other States
+			default: begin
+				next_state = IDLE;
+			end
+		endcase
+	end
+
+
+
+
+endmodule
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
