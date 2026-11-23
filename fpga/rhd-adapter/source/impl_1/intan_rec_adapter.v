@@ -25,6 +25,7 @@
 
 `include "../../../headstage/source/impl_1/afe/rhd2164/rhd2164_defs.vh"
 `include "../../../headstage/source/impl_1/common/gddr_sync.v"
+`include "../../../headstage/source/impl_1/kuntur_build.vh"
 
 
 
@@ -133,6 +134,9 @@ module intan_rec_adapter (
 	// PLL values
 	// FVCO = 1593.9; DIVOS_ACTUAL_STR = "41"; CLKOS_FREQ_ACTUAL = 37.95;
 	
+	wire cdr_phasestep, cdr_phasedir;
+	wire frx_phasestep, frx_phasedir;
+	
 	pll0 pllcdr (
 		.clki_i	(kuntur_clk),			// 37.95 MHz
 		.phasedir_i	(pll_phasedir), 	// '0'=delayed (lagging); '1'=advanced (leading)
@@ -146,6 +150,22 @@ module intan_rec_adapter (
 		.clkos_o	(kuntur_clk_os),
 		.lock_o		(pll_lock)
 	);
+	
+	
+	generate
+		if (`KUNTUR_VARIANT == 4'd2) begin: g_frames
+			assign pll_phasestep = frx_phasestep;
+			assign pll_phasedir = frx_phasedir;
+		end
+		else if (`KUNTUR_VARIANT == 4'd3) begin: g_pattern
+			assign pll_phasestep = cdr_phasestep;
+			assign pll_phasedir = cdr_phasedir;
+		end
+		else begin: g_bad
+			KUNTUR_VARIANT_must_be_2_or_3 stop();
+		end
+	endgenerate
+	
 	
 	
 	wire [8:0] phase, eye_center, eye_width;
@@ -197,8 +217,8 @@ module intan_rec_adapter (
 		.wclk	(wclk),
 		.lock	(pll_lock),
 		.din	(kuntur_data_8b),
-		.pll_phasedir	(pll_phasedir), // output
-		.pll_phasestep_sync	(pll_phasestep), // output
+		.pll_phasedir	(cdr_phasedir), // output
+		.pll_phasestep_sync	(cdr_phasestep), // output
 		.rdy	(cdr_rdy),
 		.valid	(cdr_valid),
 		.eye_center	(eye_center),
@@ -295,7 +315,7 @@ module intan_rec_adapter (
 	console #(
 		.DIV (24'd12000000),
 		.TIMEOUT (24'd120000),
-		.MODE_PATTERN (1'b1)
+		.MODE_PATTERN (`KUNTUR_VARIANT == 4'd3)
 	) console0 (
 		// inputs
 		.clkin	(clkin),
@@ -314,32 +334,57 @@ module intan_rec_adapter (
 	);
 	
 
-
-
+	wire [7:0] frx_dout;
+	wire frx_hdr_start, frx_hdr_bad, frx_frame_end, frx_crc_ok, frx_is_sample;
+	wire [31:0] frx_frame_index, fpa_smp_index;
+	wire fpa_buf_we, fpa_smp_commit, fpa_smp_invalid;
+	wire [6:0] fpa_buf_waddr;
+	wire [7:0]fpa_smp_flags;
+	wire [15:0] fpa_buf_wdata;
+	wire fpa_cfg_strobe, fpa_sts_strobe;
+	wire [175:0] fpa_cfg_regs;
+	wire [15:0] fpa_sts_design_id;
+	wire [7:0] fpa_sts_valid;
+	wire [15:0] fpa_sts_alt_cmd;
+	wire [63:0] fpa_sts_answer;
+	wire [31:0] fpa_sts_fifo0_overflow, fpa_frames_received, fpa_frames_crc_failed, fpa_frame_index_gaps, fpa_frames_cut;
+	reg frx_lock, lock_sync_reg;
 
 	// T5
 	
+	// synchronizer
+	always@(negedge cdr_rstb or posedge wclk)
+		if (!cdr_rstb) begin
+			lock_sync_reg <= 1'b0;
+			frx_lock <= 1'b0;
+		end
+		else begin
+			lock_sync_reg <= lock_sync;
+			frx_lock <= lock_sync_reg;
+		end
+	
+	
 	frame_rx #(
 		.STORED_PHASE	(9'd200),
-		.LOCK_TIMEOUT	(8'd100),
+		.LOCK_TIMEOUT	(9'd100),
 		.N_FAIL			(4'd8)
 	) frame_rx_0 (
 		// inputs
-		.rstb	(),
-		.clk	(),
-		.wclk	(),
-		.lock		(lock_sync),
-		.din		(kuntur_data),
-		.hdr_bad		(),
-		.frame_end		(),
-		.crc_ok			(),
-		.is_sample		(),
-		.frame_index	(),
+		.rstb	(cdr_rstb),
+		.clk	(clkin),
+		.wclk	(wclk),
+		.lock		(frx_lock),
+		.din		(kuntur_data_8b),
+		.hdr_bad		(frx_hdr_bad),
+		.frame_end		(frx_frame_end),
+		.crc_ok			(frx_crc_ok),
+		.is_sample		(frx_is_sample),
+		.frame_index	(frx_frame_index),
 		// outputs
-		.pll_phasestep	(),
-		.pll_phasedir	(),
-		.dout		(),
-		.hdr_start	(),
+		.pll_phasestep	(frx_phasestep),
+		.pll_phasedir	(frx_phasedir),
+		.dout		(frx_dout),
+		.hdr_start	(frx_hdr_start),
 		.dout_en	(),
 		.locked		(),
 		.stepping	(),
@@ -347,7 +392,38 @@ module intan_rec_adapter (
 		.relocks	()		
 	);
 	
-	
+	frame_parse frame_parse_0 (
+		// inputs
+		.rstb	(cdr_rstb),
+		.wclk	(wclk),
+		.din	(frx_dout),	// 8b dout
+		.hdr_start	(frx_hdr_start),
+		// outputs
+		.hdr_bad	(frx_hdr_bad),
+		.frame_end	(frx_frame_end),
+		.crc_ok	(frx_crc_ok),
+		.is_sample	(frx_is_sample),
+		.frame_index	(frx_frame_index),
+		.buf_we		(fpa_buf_we),
+		.buf_waddr	(fpa_buf_waddr),	// 7b
+		.buf_wdata	(fpa_buf_wdata),	// 16b
+		.smp_commit	(fpa_smp_commit),
+		.smp_invalid	(fpa_smp_invalid),
+		.smp_index	(fpa_smp_index),	//32b
+		.smp_flags	(fpa_smp_flags),	// 8b
+		.cfg_strobe	(fpa_cfg_strobe),
+		.cfg_regs	(fpa_cfg_regs),	// 176b
+		.sts_strobe	(fpa_sts_strobe),
+		.sts_design_id	(fpa_sts_design_id),	// 16b
+		.sts_valid	(fpa_sts_valid),	// 8b
+		.sts_alt_cmd	(fpa_sts_alt_cmd),	// 16b
+		.sts_alt_answer	(fpa_sts_answer),	// 64b
+		.sts_fifo0_overflow	(fpa_sts_fifo0_overflow),	// 32b
+		.frames_received	(fpa_frames_received),	// 32b
+		.frames_crc_failed	(fpa_frames_crc_failed),	// 32b
+		.frame_index_gaps	(fpa_frame_index_gaps),	// 32b
+		.frames_cut	(fpa_frames_cut)	// 32b
+	);
 	
 	
 	
@@ -358,6 +434,49 @@ module intan_rec_adapter (
 
 endmodule
 
+
+
+
+
+
+
+
+module triple_buffer (
+	// inputs - wclk
+	input  wire	rstb_w,		// cdr_rstb
+	input  wire wclk,
+	input  wire	buf_we,
+	input  wire	[6:0]	buf_waddr,
+	input  wire	[15:0]	buf_wdata,
+	input  wire	smp_commit,
+	input  wire	smp_invalid,
+	input  wire	[31:0]	smp_index,
+	input  wire	[7:0]	smp_flags,
+	// inputs - sclk
+	input  wire	rstb_s,		// rst_n_emu
+	input  wire	sck,		// spi0_sck
+	input  wire	convert_0,
+	input  wire	[4:0]	rd_slot,	// CONVERT(C), C= 0...31
+	input  wire	link_down,
+	// outputs - sclk
+	output wire	[15:0]	rd_a0,
+	output wire	[15:0]	rd_b0,
+	output wire	[15:0]	rd_a1,
+	output wire	[15:0]	rd_b1,
+	output wire	rd_valid,
+	output wire	[31:0]	serve_index,
+	output wire	[7:0]	serve_flag,
+	output wire	[31:0]	slip_repeat,
+	output wire	[31:0]	slip_skip,
+	output wire	[31:0]	frames_sentinel_served
+);
+
+
+
+
+
+
+endmodule
 
 
 
@@ -399,7 +518,8 @@ module frame_parse (
 	output reg	[31:0]	sts_fifo0_overflow,
 	output reg	[31:0]	frames_received,
 	output reg	[31:0]	frames_crc_failed,
-	output reg	[31:0]	frame_index_gaps
+	output reg	[31:0]	frame_index_gaps,
+	output reg	[31:0]	frames_cut
 );
 
 
@@ -428,7 +548,7 @@ module frame_parse (
 	reg crc_load, crc_en;
 	reg [31:0] crc;
 	wire [31:0] crc_out;
-	reg frames_received_en, frames_index_gaps_en;
+	reg frames_received_en, frame_index_gaps_en, frames_cut_en;
 	reg [31:0] prev_index;
 	reg [7:0] buf_wdata_lo;
 	
@@ -514,12 +634,19 @@ module frame_parse (
 		else if (frames_received_en && (frames_received != 32'hffffffff))
 			frames_received <= frames_received + 1;
 	
-	// frames_crc_failed counter
+	// frame_index_gaps counter
 	always@(negedge rstb or posedge wclk)
 		if (!rstb)
 			frame_index_gaps <= 32'd0;
-		else if ( frames_index_gaps_en && (frame_index_gaps != 32'hffffffff))
+		else if ( frame_index_gaps_en && (frame_index_gaps != 32'hffffffff))
 			frame_index_gaps <= frame_index_gaps + 1;
+	
+	// frames_cut counter
+	always@(negedge rstb or posedge wclk)
+		if (!rstb)
+			frames_cut <= 32'd0;
+		else if (frames_cut_en && (frames_cut != 32'hffffffff))
+			frames_cut <= frames_cut + 1;
 	
 	
 	
@@ -639,7 +766,8 @@ module frame_parse (
 		crc_ok = 1'b0;
 		is_sample = 1'b0;
 		frames_received_en = 1'b0;
-		frames_index_gaps_en = 1'b0;
+		frame_index_gaps_en = 1'b0;
+		frames_cut_en = 1'b0;
 		hdr_bad = 1'b0;
 		
 		case (current_state)
@@ -657,7 +785,7 @@ module frame_parse (
 					next_state = HEADER;
 					crc_load = hdr_start;
 					crc_en = 1'b1;
-					frames_crc_failed_en = 1'b1;
+					frames_cut_en = 1'b1;
 				end
 				else if (byte_index == 16'd7)
 					if (hdr_check) begin
@@ -680,7 +808,7 @@ module frame_parse (
 					next_state = HEADER;
 					crc_load = hdr_start;
 					crc_en = 1'b1;
-					frames_crc_failed_en = 1'b1;
+					frames_cut_en = 1'b1;
 				end
 				else if	(byte_index == (payload_len_reg + HDR_LEN - 1))
 					next_state = CRC32;
@@ -696,7 +824,7 @@ module frame_parse (
 					next_state = HEADER;
 					crc_load = hdr_start;
 					crc_en = 1'b1;
-					frames_crc_failed_en = 1'b1;
+					frames_cut_en = 1'b1;
 				end
 				else if	(byte_index == (payload_len_reg + HDR_LEN + CRC_LEN - 1))
 					if (crc_check) begin
@@ -704,7 +832,7 @@ module frame_parse (
 						if (type == 8'd1) begin
 							frames_received_en = 1'b1;
 							if ( (frames_received != 0) && (frame_index != (prev_index + 1)) )
-								frames_index_gaps_en = 1'b1;
+								frame_index_gaps_en = 1'b1;
 						end
 					end
 					else begin
