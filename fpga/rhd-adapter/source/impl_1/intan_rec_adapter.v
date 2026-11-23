@@ -352,25 +352,457 @@ module intan_rec_adapter (
 	
 	
 	
-	
-	frame_parser frame_parser_0 (
-		// inputs
-		.rst_n	(),
-		.wclk	(),
-		.stream		(),
-		.frame_start	(),
-		// outputs
-		.sample		(),
-		.config_data	(),
-		.status		(),
-		.frames_received		(),
-		.frames_crc_failed	(),
-		.frame_index	()
-	);
+
 
 
 
 endmodule
+
+
+
+
+
+
+
+
+
+
+
+
+
+module frame_parse (
+	// inputs
+	input  wire	rstb,
+	input  wire	wclk,
+	input  wire	[7:0]	din,	// dout
+	input  wire	hdr_start,
+	// outputs
+	output reg	hdr_bad,
+	output reg	frame_end,
+	output reg	crc_ok,
+	output reg	is_sample,
+	output reg	[31:0]	frame_index,
+	output reg	buf_we,
+	output reg	[6:0]	buf_waddr,
+	output reg	[15:0]	buf_wdata,
+	output reg	smp_commit,
+	output reg	smp_invalid,
+	output reg	[31:0]	smp_index,
+	output reg	[7:0]	smp_flags,
+	output reg	cfg_strobe,
+	output reg	[175:0]	cfg_regs,
+	output reg	sts_strobe,
+	output reg	[15:0]	sts_design_id,
+	output reg	[7:0]	sts_valid,
+	output reg	[15:0]	sts_alt_cmd,
+	output reg	[63:0]	sts_alt_answer,
+	output reg	[31:0]	sts_fifo0_overflow,
+	output reg	[31:0]	frames_received,
+	output reg	[31:0]	frames_crc_failed,
+	output reg	[31:0]	frame_index_gaps
+);
+
+
+	localparam HDR_LEN = 16'd8;
+	localparam CRC_LEN = 16'd4;
+
+	// state
+	localparam IDLE = 4'd0;
+	localparam HEADER = 4'd1;
+	localparam PAYLOAD = 4'd2;
+	localparam CRC32 = 4'd3;
+	localparam RX_END_GOOD = 4'd4;
+	localparam RX_END_BAD = 4'd5;
+	
+	// reg & wire
+	reg [3:0] current_state,next_state;
+	
+	
+	reg [15:0] byte_index, payload_len_reg;
+	reg byte_index_en;
+	wire hdr_check, crc_check;
+	reg frames_crc_failed_en;
+	
+	reg [7:0] type, flags;
+	reg [15:0] payload_len;
+	reg crc_load, crc_en;
+	reg [31:0] crc;
+	wire [31:0] crc_out;
+	reg frames_received_en, frames_index_gaps_en;
+	reg [31:0] prev_index;
+	reg [7:0] buf_wdata_lo;
+	
+	// staging for CONFIG/STATUS payload
+	reg [7:0] stage [0:21];
+	
+	
+	// byte_index counter
+	always@(negedge rstb or posedge wclk)
+		if (!rstb)
+			byte_index <= 9'd0;
+		else if (hdr_start)
+			byte_index <= 9'd1;
+		else if (byte_index_en)
+			if ( byte_index != (payload_len_reg + HDR_LEN + CRC_LEN - 1) )
+			byte_index <= byte_index + 1;
+			
+			
+	// registers: payload_len_reg
+	always@(negedge rstb or posedge wclk)
+		if (!rstb)
+			payload_len_reg <= 16'hffff;
+		else begin
+			if ( (current_state == HEADER) && (byte_index == 9'd7) )
+				payload_len_reg <= { din, payload_len[7:0] };
+			if ( (current_state == RX_END_GOOD) && (type == 8'd1) ) // SAMPLE and GOOD CRC
+				prev_index <= frame_index;
+		end
+			
+	
+	// Sampling the input
+	always@(negedge rstb or posedge wclk)
+		if (!rstb) begin
+			// header
+			type <= 8'd0;
+			flags <= 8'd0;
+			frame_index <= 32'd0;
+			payload_len <= 16'hffff;
+			crc <= 32'd0;
+		end
+		else begin
+			
+			if (hdr_start)
+				type <= din;
+				
+			case (byte_index)
+				16'd1:	flags <= din;
+				16'd2:	frame_index[7:0] <= din;
+				16'd3:	frame_index[15:8] <= din;
+				16'd4:	frame_index[23:16] <= din;
+				16'd5:	frame_index[31:24] <= din;
+				16'd6:	payload_len[7:0] <= din;
+				16'd7:	payload_len[15:8] <= din;
+				(payload_len_reg + HDR_LEN + CRC_LEN - 4):	crc[7:0] <= din;
+				(payload_len_reg + HDR_LEN + CRC_LEN - 3):	crc[15:8] <= din;
+				(payload_len_reg + HDR_LEN + CRC_LEN - 2):	crc[23:16] <= din;
+				(payload_len_reg + HDR_LEN + CRC_LEN - 1):	crc[31:24] <= din;
+				default:	;
+			endcase
+			
+		end
+	
+	
+	
+	assign hdr_check =	( 	( (type == 8'd1) && ( {din, payload_len[7:0]} == 16'd256 )	)	||
+							( (type == 8'd2) && ( {din, payload_len[7:0]} == 16'd22 )	)	|| 
+							( (type == 8'd3) && ( {din, payload_len[7:0]} == 16'd18 )	) 	) ;
+	
+	assign crc_check = ( {din,crc[23:0]} == crc_out );
+	
+	
+	// frames_crc_failed counter
+	always@(negedge rstb or posedge wclk)
+		if (!rstb)
+			frames_crc_failed <= 32'd0;
+		else if (frames_crc_failed_en && (frames_crc_failed != 32'hffffffff))
+			frames_crc_failed <= frames_crc_failed + 1;
+	
+	// frames_received counter
+	always@(negedge rstb or posedge wclk)
+		if (!rstb)
+			frames_received <= 32'd0;
+		else if (frames_received_en && (frames_received != 32'hffffffff))
+			frames_received <= frames_received + 1;
+	
+	// frames_crc_failed counter
+	always@(negedge rstb or posedge wclk)
+		if (!rstb)
+			frame_index_gaps <= 32'd0;
+		else if ( frames_index_gaps_en && (frame_index_gaps != 32'hffffffff))
+			frame_index_gaps <= frame_index_gaps + 1;
+	
+	
+	
+	// CRC
+	
+	crc32 checksum (
+		.rst_n	(rstb),
+		.load	(crc_load),
+		.en		(crc_en),
+		.clk	(wclk),
+		.din	(din),
+		.crc_out	(crc_out)
+	);
+	
+	
+	reg [6:0] stage_i;
+	
+	// registers: outputs
+	always@(negedge rstb or posedge wclk)
+		if (!rstb) begin
+			buf_we <= 1'b0;
+			buf_waddr <= 7'd0;
+			buf_wdata <= 16'd0;
+			smp_commit <= 1'b0;
+			smp_invalid <= 1'b0;
+			smp_index <= 32'd0;
+			smp_flags <= 8'd0;
+			cfg_strobe <= 1'b0;
+			cfg_regs <= 176'd0;
+			sts_strobe <= 1'b0;
+			sts_design_id <= 16'd0;
+			sts_valid <= 8'd0;
+			sts_alt_cmd <= 16'd0;
+			sts_alt_answer <= 64'd0;
+			sts_fifo0_overflow <= 32'd0;
+			
+			buf_wdata_lo <= 8'd0;
+		end
+		else begin
+			
+			buf_we <= 1'b0;
+			smp_commit <= 1'b0;
+			smp_invalid <= 1'b0;
+			cfg_strobe <= 1'b0;
+			sts_strobe <= 1'b0;
+			
+			if ( (current_state == PAYLOAD) && (type == 8'd1) ) begin
+				buf_wdata_lo <= din;
+				buf_we <= byte_index[0] && !hdr_start;
+				buf_waddr <= (byte_index - (HDR_LEN[6:0]+1)) >> 1;
+				buf_wdata <= {din, buf_wdata_lo};
+			end
+			
+			if ( (current_state == PAYLOAD) && (type != 8'd1) ) begin
+				stage_i = byte_index[6:0] - HDR_LEN[6:0];
+				stage[stage_i[4:0]] <= din;
+			end
+			
+			if ( (current_state == RX_END_GOOD) && (type == 8'd1) ) begin // SAMPLE and GOOD CRC
+				smp_commit <= 1'b1;
+				smp_index <= frame_index;
+				smp_flags <= flags;
+			end
+			
+			if ( hdr_start && (type == 8'd1) && ( (current_state == HEADER) || (current_state == PAYLOAD) || (current_state == CRC32)  ) ) begin // SAMPLE and Restart
+				smp_invalid <= 1'b1;
+			end
+			
+			if ( (current_state == HEADER) && (type == 8'd1) && (byte_index == 16'd7) && (!hdr_check) && (!hdr_start) ) begin // SAMPLE and BAD HEADER
+				smp_invalid <= 1'b1;
+			end
+			
+			if ( (current_state == RX_END_BAD) && (type == 8'd1) ) begin // SAMPLE and BAD CRC
+				smp_invalid <= 1'b1;
+			end
+
+			if ( (current_state == RX_END_GOOD) && (type == 8'd2) ) begin // CONFIG and GOOD CRC
+				cfg_strobe <= 1'b1;
+				cfg_regs <= {	stage[21], stage[20], stage[19], stage[18], stage[17], stage[16], stage[15], stage[14], stage[13], stage[12], stage[11],
+								stage[10],  stage[9],  stage[8],  stage[7],  stage[6],  stage[5],  stage[4],  stage[3],  stage[2],  stage[1],  stage[0]	};
+			end
+			
+			if ( (current_state == RX_END_GOOD) && (type == 8'd3) ) begin // STATUS and GOOD CRC
+				sts_strobe <= 1'b1;
+				sts_design_id <= { stage[1], stage[0] };
+				sts_valid <= stage[2];
+				sts_alt_cmd <= { stage[5], stage[4] };
+				sts_alt_answer <= { stage[13], stage[12], stage[11], stage[10], stage[9], stage[8], stage[7], stage[6] };
+				sts_fifo0_overflow <= { stage[17], stage[16], stage[15], stage[14] };
+			end
+			
+		end
+	
+	
+	
+
+	
+	// ******************************************************
+	// FSM
+	// ******************************************************
+	
+	// state register
+	always@(negedge rstb or posedge wclk)
+		if (!rstb)
+			current_state <= IDLE;
+		else
+			current_state <= next_state;
+	
+	// next_state logic
+	always@(*) begin
+		// default values
+		frames_crc_failed_en = 1'b0;
+		byte_index_en = 1'b0;
+		crc_load = 1'b0;
+		crc_en = 1'b0;
+		frame_end = 1'b0;
+		crc_ok = 1'b0;
+		is_sample = 1'b0;
+		frames_received_en = 1'b0;
+		frames_index_gaps_en = 1'b0;
+		hdr_bad = 1'b0;
+		
+		case (current_state)
+			IDLE: begin
+				if (hdr_start)
+					next_state = HEADER;
+				else
+					next_state = IDLE;
+				crc_load = hdr_start;
+				crc_en = 1'b1;
+			end
+			
+			HEADER: begin
+				if (hdr_start) begin
+					next_state = HEADER;
+					crc_load = hdr_start;
+					crc_en = 1'b1;
+					frames_crc_failed_en = 1'b1;
+				end
+				else if (byte_index == 16'd7)
+					if (hdr_check) begin
+						// HDR is correct
+						next_state = PAYLOAD;
+					end
+					else begin
+						next_state = IDLE;
+						frames_crc_failed_en = 1'b1;
+						hdr_bad = 1'b1;
+					end
+				else
+					next_state = HEADER;
+				crc_en = 1'b1;
+				byte_index_en = 1'b1;
+			end
+			
+			PAYLOAD: begin
+				if (hdr_start) begin
+					next_state = HEADER;
+					crc_load = hdr_start;
+					crc_en = 1'b1;
+					frames_crc_failed_en = 1'b1;
+				end
+				else if	(byte_index == (payload_len_reg + HDR_LEN - 1))
+					next_state = CRC32;
+				else
+					next_state = PAYLOAD;
+				crc_en = 1'b1;
+				byte_index_en = 1'b1;
+			end
+			
+			CRC32: begin
+				// CRC check
+				if (hdr_start) begin
+					next_state = HEADER;
+					crc_load = hdr_start;
+					crc_en = 1'b1;
+					frames_crc_failed_en = 1'b1;
+				end
+				else if	(byte_index == (payload_len_reg + HDR_LEN + CRC_LEN - 1))
+					if (crc_check) begin
+						next_state = RX_END_GOOD;
+						if (type == 8'd1) begin
+							frames_received_en = 1'b1;
+							if ( (frames_received != 0) && (frame_index != (prev_index + 1)) )
+								frames_index_gaps_en = 1'b1;
+						end
+					end
+					else begin
+						next_state = RX_END_BAD;
+						frames_crc_failed_en = 1'b1;
+					end
+				else begin
+					next_state = CRC32;
+					byte_index_en = 1'b1;
+				end
+			end
+			
+			RX_END_GOOD: begin
+				if (hdr_start) begin
+					next_state = HEADER;
+					crc_load = hdr_start;
+					crc_en = 1'b1;
+				end
+				else
+					next_state = IDLE;
+				frame_end = 1'b1;
+				crc_ok = 1'b1;
+				if (type == 8'd1) is_sample = 1'b1;
+				
+			end
+			
+			RX_END_BAD: begin
+				if (hdr_start) begin
+					next_state = HEADER;
+					crc_load = hdr_start;
+					crc_en = 1'b1;
+				end
+				else
+					next_state = IDLE;
+				frame_end = 1'b1;
+				if (type == 8'd1) is_sample = 1'b1;
+				
+			end
+			
+			// Other States
+			default: begin
+				next_state = IDLE;
+			end
+		endcase
+	end
+
+endmodule
+
+
+
+
+
+
+module crc32 (
+	input  wire	rst_n,
+	input  wire load,
+	input  wire	en,
+	input  wire	clk,
+	input  wire	[7:0]	din,
+	output wire	[31:0]	crc_out
+);
+
+	// CRC TYPE: CRC-32/ISO-HDLC
+	// Shift right, poly 0xEDB88320, bit 0 of each byte first, and feedback includes the data bit
+	// POLY: 1110 1101 1011 1000 1000 0011 0010 0000 1
+
+	localparam CRC_INIT = 32'hFFFFFFFF;
+	localparam CRC_POLY = 32'hEDB88320;
+	
+	reg [31:0] crc;
+	wire [31:0] next_0, next_1, next_2, next_3, next_4, next_5, next_6, next_7, next_8;
+	
+	// initial value
+	assign next_0 = ( load ? CRC_INIT : crc) ^ {24'd0,din};
+	
+	// 8 steps
+	assign next_1 = (next_0[0]) ? ( {1'b0, next_0[31:1]} ^ CRC_POLY ) : ( {1'b0, next_0[31:1]} );
+	assign next_2 = (next_1[0]) ? ( {1'b0, next_1[31:1]} ^ CRC_POLY ) : ( {1'b0, next_1[31:1]} );
+	assign next_3 = (next_2[0]) ? ( {1'b0, next_2[31:1]} ^ CRC_POLY ) : ( {1'b0, next_2[31:1]} );
+	assign next_4 = (next_3[0]) ? ( {1'b0, next_3[31:1]} ^ CRC_POLY ) : ( {1'b0, next_3[31:1]} );
+	assign next_5 = (next_4[0]) ? ( {1'b0, next_4[31:1]} ^ CRC_POLY ) : ( {1'b0, next_4[31:1]} );
+	assign next_6 = (next_5[0]) ? ( {1'b0, next_5[31:1]} ^ CRC_POLY ) : ( {1'b0, next_5[31:1]} );
+	assign next_7 = (next_6[0]) ? ( {1'b0, next_6[31:1]} ^ CRC_POLY ) : ( {1'b0, next_6[31:1]} );
+	assign next_8 = (next_7[0]) ? ( {1'b0, next_7[31:1]} ^ CRC_POLY ) : ( {1'b0, next_7[31:1]} );
+	
+	// CRC regsiter
+	always@(negedge rst_n or posedge clk)
+		if (!rst_n)
+			crc <= CRC_INIT;
+		else if (en)
+			crc <= next_8;
+	
+	assign crc_out = ~crc;
+
+endmodule
+
+
+
 
 
 
@@ -607,8 +1039,9 @@ module frame_rx #(
 				first_sample <= first_sample_fsm;
 		end
 	
+	
 	// ******************************************************
-	// FSM - BEGIN
+	// FSM
 	// ******************************************************
 	
 	// state register
