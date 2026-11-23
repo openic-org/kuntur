@@ -38,7 +38,8 @@
 	     CRC; the outputs change only in their strobe cycle (a failed frame
 	     leaves them as they were).
 	  P6 counters: frames_received (good SAMPLEs), frames_crc_failed (bad
-	     CRC, hdr_bad, cut short; any type), frame_index_gaps (good SAMPLE
+	     CRC or hdr_bad; any type), frames_cut (cut short by hdr_start, any
+	     type; added 2026-11-23), frame_index_gaps (good SAMPLE
 	     whose index is not the previous good one + 1, mod 2^32; none on the
 	     first after reset) equal the tb's count, checked whenever 6 wclk have
 	     passed since the last event. Saturation (never wrap) with
@@ -51,7 +52,8 @@
 	     flags right), every aux frame strobed with its payload, no invalid,
 	     counters as sent, lock held.
 	  B2 one bad CRC / one bad header on a SAMPLE: smp_invalid + 1,
-	     frames_crc_failed + 1, frame_index_gaps + 1, lock held. One SAMPLE
+	     frames_crc_failed + 1, frame_index_gaps + 1, lock held; frames_cut
+	     + 0 in every stretch. One SAMPLE
 	     with a corrupted preamble: no invalid, no failure, gaps + 1 (the case
 	     Q1 leaves to frame_index_gaps). 8 consecutive bad CRCs (SAMPLE and
 	     aux): unlock, relock, clean.
@@ -133,7 +135,7 @@ module frame_parse_tb;
 	wire [7:0] a_sts_valid;
 	wire [63:0] a_sts_alt_answer;
 	wire [31:0] a_sts_fifo0_overflow;
-	wire [31:0] a_frames_received, a_frames_crc_failed, a_frame_index_gaps;
+	wire [31:0] a_frames_received, a_frames_crc_failed, a_frames_cut, a_frame_index_gaps;
 
 	frame_parse pa (
 		.rstb(rstb_a), .wclk(wclk), .din(din_a), .hdr_start(hs_a),
@@ -146,7 +148,7 @@ module frame_parse_tb;
 		.sts_strobe(a_sts_strobe), .sts_design_id(a_sts_design_id),
 		.sts_valid(a_sts_valid), .sts_alt_cmd(a_sts_alt_cmd),
 		.sts_alt_answer(a_sts_alt_answer), .sts_fifo0_overflow(a_sts_fifo0_overflow),
-		.frames_received(a_frames_received), .frames_crc_failed(a_frames_crc_failed),
+		.frames_received(a_frames_received), .frames_crc_failed(a_frames_crc_failed), .frames_cut(a_frames_cut),
 		.frame_index_gaps(a_frame_index_gaps)
 	);
 
@@ -179,7 +181,7 @@ module frame_parse_tb;
 	integer maxlat[6] = '{0, 0, 0, 0, 0, 0};
 
 	// tb model of the counters
-	reg [31:0] m_recv = 0, m_fail = 0, m_gaps = 0, m_prev = 0;
+	reg [31:0] m_recv = 0, m_fail = 0, m_cut = 0, m_gaps = 0, m_prev = 0;
 	bit m_have_prev = 0;
 	integer quiet_after = 0;
 	integer cyc_a = 0;
@@ -221,7 +223,7 @@ module frame_parse_tb;
 	endtask
 	task automatic decide_cut(input int f, input int c);
 		if (frm[f].typ == 8'h01) expect_ev(E_INV, c, f);
-		m_fail = sat_inc(m_fail);
+		m_cut = sat_inc(m_cut);
 		quiet_after = c + QUIET;
 		frm[f].done = 1;
 	endtask
@@ -445,6 +447,10 @@ module frame_parse_tb;
 				err($sformatf("P6 frames_crc_failed %0d, expected %0d (last hdr_start: %s)", a_frames_crc_failed, m_fail, cur >= 0 ? frm[cur].what : "-"));
 				m_fail = a_frames_crc_failed;
 			end
+			if (a_frames_cut !== m_cut) begin
+				err($sformatf("P6 frames_cut %0d, expected %0d (last hdr_start: %s)", a_frames_cut, m_cut, cur >= 0 ? frm[cur].what : "-"));
+				m_cut = a_frames_cut;
+			end
 			if (a_frame_index_gaps !== m_gaps) begin
 				err($sformatf("P6 frame_index_gaps %0d, expected %0d (last hdr_start: %s)", a_frame_index_gaps, m_gaps, cur >= 0 ? frm[cur].what : "-"));
 				m_gaps = a_frame_index_gaps;
@@ -476,7 +482,7 @@ module frame_parse_tb;
 	wire [7:0] b_sts_valid;
 	wire [63:0] b_sts_alt_answer;
 	wire [31:0] b_sts_fifo0_overflow;
-	wire [31:0] b_frames_received, b_frames_crc_failed, b_frame_index_gaps;
+	wire [31:0] b_frames_received, b_frames_crc_failed, b_frames_cut, b_frame_index_gaps;
 
 	frame_rx #(.STORED_PHASE(2), .LOCK_TIMEOUT(9'd100), .N_FAIL(4'd8)) rx (
 		.rstb(rstb_b), .clk(clk), .wclk(wclk), .lock(lock_b), .din(din_b),
@@ -498,7 +504,7 @@ module frame_parse_tb;
 		.sts_strobe(b_sts_strobe), .sts_design_id(b_sts_design_id),
 		.sts_valid(b_sts_valid), .sts_alt_cmd(b_sts_alt_cmd),
 		.sts_alt_answer(b_sts_alt_answer), .sts_fifo0_overflow(b_sts_fifo0_overflow),
-		.frames_received(b_frames_received), .frames_crc_failed(b_frames_crc_failed),
+		.frames_received(b_frames_received), .frames_crc_failed(b_frames_crc_failed), .frames_cut(b_frames_cut),
 		.frame_index_gaps(b_frame_index_gaps)
 	);
 
@@ -687,11 +693,11 @@ module frame_parse_tb;
 
 	task automatic stretch(input string what, input integer n, input integer d_inv, input integer d_fail, input integer d_gaps);
 		integer s0, a0, c0, x0, i0, l0;
-		reg [31:0] r0, f0, g0;
+		reg [31:0] r0, f0, g0, u0;
 		begin
 			wait_periods(1);
 			s0 = sent_smp; a0 = sent_aux; c0 = n_commit_b; x0 = n_aux_b; i0 = n_inv_b; l0 = l_fall_b;
-			r0 = b_frames_received; f0 = b_frames_crc_failed; g0 = b_frame_index_gaps;
+			r0 = b_frames_received; f0 = b_frames_crc_failed; g0 = b_frame_index_gaps; u0 = b_frames_cut;
 			wait_periods(n);
 			if (n_commit_b - c0 != sent_smp - s0)
 				err($sformatf("B %s: %0d good SAMPLEs sent, %0d committed", what, sent_smp - s0, n_commit_b - c0));
@@ -702,6 +708,7 @@ module frame_parse_tb;
 				err($sformatf("B %s: frames_received + %0d, commits + %0d", what, b_frames_received - r0, n_commit_b - c0));
 			if (b_frames_crc_failed - f0 != d_fail)
 				err($sformatf("B %s: frames_crc_failed + %0d, expected + %0d", what, b_frames_crc_failed - f0, d_fail));
+			if (b_frames_cut != u0) err($sformatf("B %s: frames_cut + %0d, expected + 0", what, b_frames_cut - u0));
 			if (b_frame_index_gaps - g0 != d_gaps)
 				err($sformatf("B %s: frame_index_gaps + %0d, expected + %0d", what, b_frame_index_gaps - g0, d_gaps));
 			if (l_fall_b != l0) err($sformatf("B %s: lock lost", what));
@@ -826,22 +833,24 @@ module frame_parse_tb;
 `ifdef FP_SAT
 		$display("A7 counters saturate (FP_SAT)");
 		@(negedge wclk);
-		pa.frames_received = MAXC - 1; pa.frames_crc_failed = MAXC - 1; pa.frame_index_gaps = MAXC - 1;
-		m_recv = MAXC - 1; m_fail = MAXC - 1; m_gaps = MAXC - 1;
+		pa.frames_received = MAXC - 1; pa.frames_crc_failed = MAXC - 1; pa.frames_cut = MAXC - 1; pa.frame_index_gaps = MAXC - 1;
+		m_recv = MAXC - 1; m_fail = MAXC - 1; m_cut = MAXC - 1; m_gaps = MAXC - 1;
 		for (i = 0; i < 3; i = i + 1) begin
 			a_idx = a_idx + 2; good(8'h01, 10, "A7 SAMPLE with a gap");
 			push_gap(10); push_frame(8'h01, 16'd256, a_idx, 1, 0, 0, "A7 bad CRC", fid_x);
+			push_gap(10); push_frame(8'h01, 16'd256, a_idx, 0, 50, 0, "A7 SAMPLE cut", fid_x);
 		end
+		good(8'h01, 10, "A7 SAMPLE cutting the last one");
 		drain(30);
-		if (a_frames_received !== MAXC || a_frames_crc_failed !== MAXC || a_frame_index_gaps !== MAXC)
-			err($sformatf("P6 counters not saturated: %h %h %h", a_frames_received, a_frames_crc_failed, a_frame_index_gaps));
+		if (a_frames_received !== MAXC || a_frames_crc_failed !== MAXC || a_frames_cut !== MAXC || a_frame_index_gaps !== MAXC)
+			err($sformatf("P6 counters not saturated: %h %h %h %h", a_frames_received, a_frames_crc_failed, a_frames_cut, a_frame_index_gaps));
 `endif
 		drain(10);
 		checks_a = 0;
 		for (k = 0; k < 6; k = k + 1)
 			if (ex[k].size() > 0) err($sformatf("P1 %0d %s still expected at the end of part A", ex[k].size(), ename[k]));
-		$display("A: %0d frames, %0d commits, %0d invalid, %0d CONFIG, %0d STATUS, %0d writes; counters %0d / %0d / %0d",
-			frm.size(), n_commit_a, n_inv_a, n_cfg_a, n_sts_a, n_we_a, a_frames_received, a_frames_crc_failed, a_frame_index_gaps);
+		$display("A: %0d frames, %0d commits, %0d invalid, %0d CONFIG, %0d STATUS, %0d writes; counters rx %0d / crc %0d / cut %0d / gaps %0d",
+			frm.size(), n_commit_a, n_inv_a, n_cfg_a, n_sts_a, n_we_a, a_frames_received, a_frames_crc_failed, a_frames_cut, a_frame_index_gaps);
 		$display("A: latency (wclk after the deciding byte): hdr_bad %0d, frame_end %0d, commit %0d, invalid %0d, cfg %0d, sts %0d",
 			maxlat[E_HB], maxlat[E_FE], maxlat[E_COMMIT], maxlat[E_INV], maxlat[E_CFG], maxlat[E_STS]);
 
@@ -870,8 +879,8 @@ module frame_parse_tb;
 		stretch("B3 clean", 12, 0, 0, 0);
 
 		checks_b = 0;
-		$display("B: %0d commits, %0d aux, %0d invalid; counters %0d / %0d / %0d; relocks %0d",
-			n_commit_b, n_aux_b, n_inv_b, b_frames_received, b_frames_crc_failed, b_frame_index_gaps, b_relocks);
+		$display("B: %0d commits, %0d aux, %0d invalid; counters rx %0d / crc %0d / cut %0d / gaps %0d; relocks %0d",
+			n_commit_b, n_aux_b, n_inv_b, b_frames_received, b_frames_crc_failed, b_frames_cut, b_frame_index_gaps, b_relocks);
 		err_summary;
 		if (errors == 0) $display("frame_parse_tb: PASS");
 		else $display("frame_parse_tb: FAIL, %0d errors", errors);
