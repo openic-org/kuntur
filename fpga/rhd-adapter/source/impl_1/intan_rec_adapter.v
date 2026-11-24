@@ -455,25 +455,253 @@ module triple_buffer (
 	// inputs - sclk
 	input  wire	rstb_s,		// rst_n_emu
 	input  wire	sck,		// spi0_sck
-	input  wire	convert_0,
+	input  wire	frame_start,
 	input  wire	[4:0]	rd_slot,	// CONVERT(C), C= 0...31
 	input  wire	link_down,
 	// outputs - sclk
-	output wire	[15:0]	rd_a0,
-	output wire	[15:0]	rd_b0,
-	output wire	[15:0]	rd_a1,
-	output wire	[15:0]	rd_b1,
+	output reg	[15:0]	rd_a0,
+	output reg	[15:0]	rd_b0,
+	output reg	[15:0]	rd_a1,
+	output reg	[15:0]	rd_b1,
 	output wire	rd_valid,
-	output wire	[31:0]	serve_index,
-	output wire	[7:0]	serve_flag,
-	output wire	[31:0]	slip_repeat,
-	output wire	[31:0]	slip_skip,
-	output wire	[31:0]	frames_sentinel_served
+	output reg	[31:0]	serve_index,
+	output reg	[7:0]	serve_flags,
+	output reg	[31:0]	slip_repeat,
+	output reg	[31:0]	slip_skip,
+	output reg	[31:0]	frames_sentinel_served
 );
 
 
+	
+	
+	reg [15:0] ram0 [0:127];
+	reg [15:0] ram1 [0:127];
+	reg [15:0] ram2 [0:127];
+	reg [15:0] n_w, nv_w;
+	reg [1:0] wb, wbank, lbank, rbank, rb_sync;
+	reg need_pick, l_valid;
+	reg [31:0] l_index;
+	reg [7:0] l_flags;
+	reg [1:0] rb_sync_0;
+	
+	
+	// writing
+	
+	
+	// synchronizers
+	always@(negedge rstb_w or posedge wclk)
+		if (!rstb_w) begin
+			rb_sync <= 2'd0; rb_sync_0 <= 2'd0;
+		end
+		else begin
+			rb_sync <= rb_sync_0; rb_sync_0 <= rbank;
+		end
+	
+	
+	always@(*)
+		if (buf_we && need_pick) begin
+			if ( (lbank != 2'd0) && (rb_sync != 2'd0) )
+				wb = 2'd0;
+			else if ( (lbank != 2'd1) && (rb_sync != 2'd1) )
+				wb = 2'd1;
+			else
+				wb = 2'd2;
+		end
+		else
+			wb = wbank;
+	
+	always@(negedge rstb_w or posedge wclk)
+		if (!rstb_w) begin
+			wbank <= 2'd0;
+			lbank <= 2'd1;
+			l_valid <= 1'b0;
+			l_index <= 0;
+			l_flags <= 0;
+			n_w <= 16'd0;
+			nv_w <= 16'd0;
+			need_pick <= 1'b1;
+		end
+		else begin
+			
+			if (buf_we) begin
+				wbank <= wb;
+				need_pick <= 1'b0;
+			end
+			
+			if (smp_commit) begin
+				lbank <= wbank;
+				l_valid <= 1'b1;
+				l_index <= smp_index;
+				l_flags <= smp_flags;
+				n_w <= n_w + 1;
+				nv_w <= nv_w + 1;
+				need_pick <= 1'b1;
+			end
+			else if (smp_invalid) begin
+				l_valid <= 1'b0;
+				n_w <= n_w + 1;
+				need_pick <= 1'b1;
+			end
+			
+		end
+	
+	
+	always@(posedge wclk) if (buf_we && wb == 2'd0) ram0[buf_waddr] <= buf_wdata;
+	always@(posedge wclk) if (buf_we && wb == 2'd1) ram1[buf_waddr] <= buf_wdata;
+	always@(posedge wclk) if (buf_we && wb == 2'd2) ram2[buf_waddr] <= buf_wdata;
 
+	
+	// reading
+	reg fs_d;
+	reg [15:0] n_r, nv_r, c_n, c_nv;
+	wire [15:0] new_n, new_nv;
+	wire fs_edge;
+	reg [1:0] c_bank;
+	reg held_v, repeat_flag, sent_flag, started, c_valid, ld_s;
+	reg ld_s_0;
+	reg [31:0] c_index;
+	reg [7:0] c_flags;
+	
+	assign new_n = c_n - n_r; // entries since the last decision (valid or not)
+	assign new_nv = c_nv - nv_r; // valid entries since the last decision
+	assign fs_edge = frame_start & ~fs_d;
+	
+	// wclk side: Gray copy of n_w, one wclk after n_w. 
+	// n_w only steps by +1, so one bit of g_w changes
+	reg [15:0] g_w;
+	always @(negedge rstb_w or posedge wclk)
+		if (!rstb_w)
+			g_w <= 16'd0;
+		else
+			g_w <= n_w ^ (n_w >> 1);
+	
+	reg [15:0] g1, g2, g3, g2_bin;
+	
+	always@(*) begin
+		g2_bin[15] = g2[15];
+		g2_bin[14] = g2_bin[15] ^ g2[14];
+		g2_bin[13] = g2_bin[14] ^ g2[13];
+		g2_bin[12] = g2_bin[13] ^ g2[12];
+		g2_bin[11] = g2_bin[12] ^ g2[11];
+		g2_bin[10] = g2_bin[11] ^ g2[10];
+		g2_bin[9] = g2_bin[10] ^ g2[9];
+		g2_bin[8] = g2_bin[9] ^ g2[8];
+		g2_bin[7] = g2_bin[8] ^ g2[7];
+		g2_bin[6] = g2_bin[7] ^ g2[6];
+		g2_bin[5] = g2_bin[6] ^ g2[5];
+		g2_bin[4] = g2_bin[5] ^ g2[4];
+		g2_bin[3] = g2_bin[4] ^ g2[3];
+		g2_bin[2] = g2_bin[3] ^ g2[2];
+		g2_bin[1] = g2_bin[2] ^ g2[1];
+		g2_bin[0] = g2_bin[1] ^ g2[0];
+	end
+	
+	always@(negedge rstb_s or posedge sck)
+		if (!rstb_s) begin
+			g1 <= 16'd0; g2 <= 16'd0; g3 <= 16'd0;
+			c_n <= 16'd0; c_nv <= 16'd0; c_valid <= 1'b0; c_bank <= 2'd0;
+			c_index <= 32'd0; c_flags <= 8'd0;
+			ld_s <= 1'b0; ld_s_0 <= 1'b0;
+		end
+		else begin
+			g1 <= g_w;
+			g2 <= g1;
+			g3 <= g2;
+			if (g2 != g3) begin
+				c_n		<= g2_bin;
+				c_nv	<= nv_w;
+				c_valid	<= l_valid;
+				c_bank	<= lbank;
+				c_index <= l_index;
+				c_flags <= l_flags;
+			end
+			ld_s <= ld_s_0; ld_s_0 <=  link_down;
+		end
 
+	
+	wire d_take, d_repeat, d_consume, d_skip_en, held_next, rdv;
+	wire [15:0] d_skip;
+	wire [1:0] rb;
+	
+	// decision at fs_edge
+	assign d_take	 =	fs_edge && !ld_s && (new_n != 16'd0) && c_valid;	// newest valid -> take it
+	assign d_repeat	 =	fs_edge && !ld_s && (new_n == 16'd0) && held_v && !repeat_flag; // no new data -> repeat
+	assign d_consume	 =	fs_edge && ( ld_s || (new_n != 16'd0) );	// entries seen -> n_r, nv_r follow
+	assign d_skip_en	 =	fs_edge && !ld_s && (new_n != 16'd0) && started;
+	assign d_skip	 =	(c_valid) ? (new_nv - 16'd1) : new_nv;	// valid entries passed over
+	
+	assign rb = (d_take) ? c_bank:rbank;
+	assign held_next = (fs_edge) ? (d_take || d_repeat):held_v;
+	assign rdv = (held_next && !ld_s);
+	
+	
+	
+	always@(negedge rstb_s or posedge sck)
+		if (!rstb_s) begin
+			fs_d <= 1'b0; held_v <= 1'b0; repeat_flag <= 1'b0; sent_flag <= 1'b0; started <= 1'b0;
+			rbank <= 2'd2; n_r <= 16'd0; nv_r <= 16'd0;
+			serve_index <= 32'd0; serve_flags <= 8'd0;
+			slip_repeat <= 32'd0; slip_skip <= 32'd0; frames_sentinel_served <= 32'd0;
+		end
+		else begin
+			fs_d <= frame_start;
+			rbank <= rb;
+			held_v <= held_next;
+			if (fs_edge) begin
+				repeat_flag <= d_repeat;
+			end
+			if (d_consume) begin
+				n_r <= c_n;
+				nv_r <= c_nv;
+			end
+			if (d_take) begin
+				serve_index <= c_index;
+				serve_flags <= c_flags;
+				started <= 1'b1;
+			end
+			if (d_repeat) begin
+				if (slip_repeat != 32'hffffffff)
+					slip_repeat <= slip_repeat + 1;
+			end
+			if (d_skip_en) begin
+				if ( ({1'b0,slip_skip} + {1'b0,d_skip}) >=33'h0ffffffff )
+					slip_skip <= 32'hffffffff;
+				else
+					slip_skip <= slip_skip + d_skip;
+			end
+			if ( !rdv && ( fs_edge || !sent_flag) )
+				if (frames_sentinel_served != 32'hffffffff)
+					frames_sentinel_served <= frames_sentinel_served + 1;
+			
+			sent_flag <= (fs_edge) ? !rdv : ( sent_flag || !rdv );
+			
+		end
+	
+	
+	
+	always@(posedge sck)
+		case (rb)
+			2'd0: begin
+				rd_a0 <= ram0[ {rd_slot, 2'd0} ];
+				rd_b0 <= ram0[ {rd_slot, 2'd1} ];
+				rd_a1 <= ram0[ {rd_slot, 2'd2} ];
+				rd_b1 <= ram0[ {rd_slot, 2'd3} ];
+			end
+			2'd1: begin
+				rd_a0 <= ram1[ {rd_slot, 2'd0} ];
+				rd_b0 <= ram1[ {rd_slot, 2'd1} ];
+				rd_a1 <= ram1[ {rd_slot, 2'd2} ];
+				rd_b1 <= ram1[ {rd_slot, 2'd3} ];
+			end
+			default: begin
+				rd_a0 <= ram2[ {rd_slot, 2'd0} ];
+				rd_b0 <= ram2[ {rd_slot, 2'd1} ];
+				rd_a1 <= ram2[ {rd_slot, 2'd2} ];
+				rd_b1 <= ram2[ {rd_slot, 2'd3} ];
+			end
+		endcase
+	
+	assign rd_valid = held_v && !ld_s;
 
 
 endmodule
