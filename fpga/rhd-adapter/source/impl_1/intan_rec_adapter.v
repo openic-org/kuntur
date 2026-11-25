@@ -57,13 +57,12 @@ module intan_rec_adapter (
 	// wire & regs
 	wire clk;
 	
-	reg [15:0] spi0_data_tx_a0, spi0_data_tx_b0, spi0_data_tx_a1, spi0_data_tx_b1;
+	wire [15:0] spi0_data_tx_a0, spi0_data_tx_b0, spi0_data_tx_a1, spi0_data_tx_b1;
 	wire [15:0] spi0_data_rx;
 	wire spi0_done, tx_load;
 	wire [1:0] cmd_code;
 	wire [5:0] cmd_register;
 	wire [7:0] reg_ram0_dout0, reg_ram0_dout1,reg_ram0_dh, cmd_data;
-	wire [15:0] reg_ram0_dout0_16b,reg_ram0_dout1_16b;
 	
 	wire kuntur_clk_0,kuntur_clk_os,eclk,wclk;
 	wire [7:0] kuntur_data_8b;
@@ -237,6 +236,7 @@ module intan_rec_adapter (
 	
 
 	// RHD2164 SPI Slave Model	
+	wire spi0_word_end;
 	
 	rhd2164x2_spi_slave_model rhd2164x2_spi0 (
 		.rstb	(rst_n_emu),		// Active-low asyncrhonous reset
@@ -251,6 +251,7 @@ module intan_rec_adapter (
 		.data_tx_b1	(spi0_data_tx_b1),	// Data to be transmitted
 		.data_rx	(spi0_data_rx),	// Data received
 		.tx_load	(tx_load),
+		.word_end	(spi0_word_end),
 		.done	(spi0_done)		// TX/RX operation completed; no communicacion happening
 	);
 	
@@ -269,23 +270,7 @@ module intan_rec_adapter (
 		.dh		(reg_ram0_dh)
 	);
 	
-	assign reg_ram0_dout0_16b = {reg_ram0_dh,reg_ram0_dout0};
-	assign reg_ram0_dout1_16b = {reg_ram0_dh,reg_ram0_dout1};
 	
-	// data_tx registers
-	always@(negedge rst_n_emu or posedge spi0_sck)
-		if (!rst_n_emu) begin
-			spi0_data_tx_a0 <= 16'd0;
-			spi0_data_tx_b0 <= 16'd0;
-			spi0_data_tx_a1 <= 16'd0;
-			spi0_data_tx_b1 <= 16'd0;
-		end
-		else if (tx_load) begin
-			spi0_data_tx_a0 <= reg_ram0_dout0_16b;
-			spi0_data_tx_b0 <= reg_ram0_dout1_16b;
-			spi0_data_tx_a1 <= reg_ram0_dout0_16b;
-			spi0_data_tx_b1 <= reg_ram0_dout1_16b;
-		end
 
 
 
@@ -426,13 +411,285 @@ module intan_rec_adapter (
 	);
 	
 	
+	wire [15:0] emu_rd_a0, emu_rd_b0, emu_rd_a1, emu_rd_b1;
+	wire emu_rd_valid, emu_frame_start;
+	wire [4:0] emu_rd_slot;
 	
 	
+	emu_answer emu_answer_0 (
+		// inputs
+		.rstb	(rst_n_emu),	// rst_n_emu
+		.sck	(spi0_sck),
+		.data_rx	(spi0_data_rx),	// 16b
+		.tx_load	(tx_load),
+		.dout0	(reg_ram0_dout0),	// 8b - low-byte of MISO A answer
+		.dout1	(reg_ram0_dout1),	// 8b - low-byte of MISO B answer
+		.dh	(reg_ram0_dh),	// 8b - high-byte of both answers
+		.rd_a0	(emu_rd_a0),	// 16b
+		.rd_b0	(emu_rd_b0),	// 16b
+		.rd_a1	(emu_rd_a1),	// 16b
+		.rd_b1	(emu_rd_b1),	// 16b
+		.rd_valid	(emu_rd_valid),
+		.cfg_regs_s	(176'd0),	// 176b
+		.cfg_valid_s	(1'b0),
+		.word_end	(spi0_word_end),
+		// outpus
+		.data_tx_a0	(spi0_data_tx_a0),	// 16b
+		.data_tx_b0	(spi0_data_tx_b0),	// 16b
+		.data_tx_a1	(spi0_data_tx_a1),	// 16b
+		.data_tx_b1	(spi0_data_tx_b1),	// 16b
+		.frame_start	(emu_frame_start),
+		.rd_slot	(emu_rd_slot),	// 5b
+		.cmd_strobe	()
+	);
+	
+	
+		
+		
+		
+	
+	triple_buffer triple_buffer_0 (
+		// inputs - wclk
+		.rstb_w	(cdr_rstb),		// cdr_rstb
+		.wclk	(wclk),
+		.buf_we	(fpa_buf_we),
+		.buf_waddr	(fpa_buf_waddr),
+		.buf_wdata	(fpa_buf_wdata),
+		.smp_commit	(fpa_smp_commit),
+		.smp_invalid	(fpa_smp_invalid),
+		.smp_index	(fpa_smp_index),
+		.smp_flags	(fpa_smp_flags),
+		// inputs - sclk
+		.rstb_s	(rst_n_emu),		// rst_n_emu
+		.sck	(spi0_sck),		// spi0_sck
+		.frame_start	(emu_frame_start),
+		.rd_slot	(emu_rd_slot),	// CONVERT(C), C= 0...31
+		.link_down	(1'b0),
+		// outputs - sclk
+		.rd_a0	(emu_rd_a0),
+		.rd_b0	(emu_rd_b0),
+		.rd_a1	(emu_rd_a1),
+		.rd_b1	(emu_rd_b1),
+		.rd_valid	(emu_rd_valid),
+		.serve_index	(),
+		.serve_flags	(),
+		.slip_repeat	(),
+		.slip_skip	(),
+		.frames_sentinel_served	()
+	);
 
 
 
 
 endmodule
+
+
+
+
+
+
+
+
+
+module emu_answer (
+	// inputs
+	input  wire	rstb,	// rst_n_emu
+	input  wire	sck,
+	input  wire	[15:0]	data_rx,	// 16b
+	input  wire	tx_load,
+	input  wire	[7:0]	dout0,	// 8b - low-byte of MISO A answer
+	input  wire	[7:0]	dout1,	// 8b - low-byte of MISO B answer
+	input  wire	[7:0]	dh,	// 8b - high-byte of both answers
+	input  wire	[15:0]	rd_a0,	// 16b
+	input  wire	[15:0]	rd_b0,	// 16b
+	input  wire	[15:0]	rd_a1,	// 16b
+	input  wire	[15:0]	rd_b1,	// 16b
+	input  wire	rd_valid,
+	input  wire	[175:0]	cfg_regs_s,	// 176b
+	input  wire	cfg_valid_s,
+	input  wire	word_end,
+	// outpus
+	output reg	[15:0]	data_tx_a0,	// 16b
+	output reg	[15:0]	data_tx_b0,	// 16b
+	output reg	[15:0]	data_tx_a1,	// 16b
+	output reg	[15:0]	data_tx_b1,	// 16b
+	output reg	frame_start,
+	output reg	[4:0]	rd_slot,	// 5b
+	output wire	cmd_strobe
+);
+
+
+	reg [7:0] cfg_c [0:21];
+	
+	wire [1:0] code, code_raw;
+	wire [5:0] c, c_raw;
+	reg [4:0] c_last;
+	reg [15:0] data_rx_q;
+	
+	
+	// data_rx input register
+	always@(negedge rstb or posedge sck)
+		if (!rstb)
+			data_rx_q <= 16'hff00;
+		else
+			data_rx_q <= data_rx;
+	
+	// Decode data_rx
+	assign code	= data_rx_q[15:14];
+	assign c	= data_rx_q[13:8];
+	
+	assign code_raw	= data_rx[15:14];
+	assign c_raw	= data_rx[13:8];
+	
+	always@(*) begin
+		cfg_c[6'd0] = cfg_regs_s[7:0];
+		cfg_c[6'd1] = cfg_regs_s[15:8];
+		cfg_c[6'd2] = cfg_regs_s[23:16];
+		cfg_c[6'd3] = cfg_regs_s[31:24];
+		cfg_c[6'd4] = cfg_regs_s[39:32];
+		cfg_c[6'd5] = cfg_regs_s[47:40];
+		cfg_c[6'd6] = cfg_regs_s[55:48];
+		cfg_c[6'd7] = cfg_regs_s[63:56];
+		cfg_c[6'd8] = cfg_regs_s[71:64];
+		cfg_c[6'd9] = cfg_regs_s[79:72];
+		cfg_c[6'd10] = cfg_regs_s[87:80];
+		cfg_c[6'd11] = cfg_regs_s[95:88];
+		cfg_c[6'd12] = cfg_regs_s[103:96];
+		cfg_c[6'd13] = cfg_regs_s[111:104];
+		cfg_c[6'd14] = cfg_regs_s[119:112];
+		cfg_c[6'd15] = cfg_regs_s[127:120];
+		cfg_c[6'd16] = cfg_regs_s[135:128];
+		cfg_c[6'd17] = cfg_regs_s[143:136];
+		cfg_c[6'd18] = cfg_regs_s[151:144];
+		cfg_c[6'd19] = cfg_regs_s[159:152];
+		cfg_c[6'd20] = cfg_regs_s[167:160];
+		cfg_c[6'd21] = cfg_regs_s[175:168];
+	end
+	
+	
+	always@(negedge rstb or posedge sck) begin
+		if (!rstb) begin
+			data_tx_a0 <= 16'd0;
+			data_tx_b0 <= 16'd0;
+			data_tx_a1 <= 16'd0;
+			data_tx_b1 <= 16'd0;
+			c_last <= 5'd31;
+		end
+		else begin
+			if (tx_load) begin
+				if (code==`RHD_CONVERT_CODE) begin
+					// data_tx
+					if ( (c < 6'd32) || (c == 6'd63) ) begin
+						if (rd_valid) begin
+							data_tx_a0 <= rd_a0 ^ 16'h8000;
+							data_tx_b0 <= rd_b0 ^ 16'h8000;
+							data_tx_a1 <= rd_a1 ^ 16'h8000;
+							data_tx_b1 <= rd_b1 ^ 16'h8000;
+						end
+						else begin
+							data_tx_a0 <= 16'h0000;
+							data_tx_b0 <= 16'h0000;
+							data_tx_a1 <= 16'h0000;
+							data_tx_b1 <= 16'h0000;
+						end
+					end
+					else if ( (c == 6'd32) || (c == 6'd33) || (c == 6'd34)) begin
+						data_tx_a0 <= 16'h0000;
+						data_tx_b0 <= 16'h0000;
+						data_tx_a1 <= 16'h0000;
+						data_tx_b1 <= 16'h0000;
+					end
+					else if (c == 6'd48) begin
+						data_tx_a0 <= 16'd44100;
+						data_tx_b0 <= 16'd44100;
+						data_tx_a1 <= 16'd44100;
+						data_tx_b1 <= 16'd44100;
+					end
+					else begin
+						data_tx_a0 <= 16'h0000;
+						data_tx_b0 <= 16'h0000;
+						data_tx_a1 <= 16'h0000;
+						data_tx_b1 <= 16'h0000;
+					end
+					
+					
+				end
+				else if (code==`RHD_READ_CODE) begin
+					// data_tx
+					if (c <= 6'd21) begin
+						if (cfg_valid_s) begin
+							data_tx_a0 <= {8'h00, cfg_c[c]};
+							data_tx_b0 <= {8'h00, cfg_c[c]};
+							data_tx_a1 <= {8'h00, cfg_c[c]};
+							data_tx_b1 <= {8'h00, cfg_c[c]};
+						end
+						else begin
+							data_tx_a0 <= 16'h0000;
+							data_tx_b0 <= 16'h0000;
+							data_tx_a1 <= 16'h0000;
+							data_tx_b1 <= 16'h0000;
+						end
+					end
+					else begin
+						data_tx_a0 <= {dh, dout0};
+						data_tx_b0 <= {dh, dout1};
+						data_tx_a1 <= {dh, dout0};
+						data_tx_b1 <= {dh, dout1};
+					end
+				end
+				else if (code==`RHD_WRITE_CODE) begin
+					data_tx_a0 <= {dh, dout0};
+					data_tx_b0 <= {dh, dout1};
+					data_tx_a1 <= {dh, dout0};
+					data_tx_b1 <= {dh, dout1};
+				end
+				else begin
+					data_tx_a0 <= {dh, dout0};
+					data_tx_b0 <= {dh, dout1};
+					data_tx_a1 <= {dh, dout0};
+					data_tx_b1 <= {dh, dout1};
+				end
+			end
+				
+			if ( word_end && (code == `RHD_CONVERT_CODE) ) begin
+				// c_last
+				if (c < 6'd32)
+					c_last <= c[4:0];
+				else if (c == 6'd63)
+					c_last <= c_last + 5'd1;
+			end
+		end
+	end
+	
+	
+	// rd_slot - combinational
+	always@(*) begin
+		if (!c_raw[5])
+			rd_slot = c_raw[4:0];
+		else if (c_raw == 6'd63)
+			rd_slot = c_last + 1;
+		else
+			rd_slot = 5'd0;
+	end
+	
+	// frame_start - combinational
+	always@(*) begin
+		if (code_raw == `RHD_CONVERT_CODE)
+			if ( (c_raw == 6'd0) || ( (c_raw == 6'd63) && ( c_last == 5'd31) ) )
+				frame_start = 1'b1;
+			else
+				frame_start = 1'b0;
+		else
+			frame_start = 1'b0;
+	end	
+	
+	
+	// cmd_strobe
+	assign cmd_strobe = tx_load;
+
+endmodule
+
+
 
 
 
@@ -880,7 +1137,7 @@ module frame_parse (
 	
 	// CRC
 	
-	crc32 checksum (
+	crc32_rx checksum (
 		.rst_n	(rstb),
 		.load	(crc_load),
 		.en		(crc_en),
@@ -1114,7 +1371,7 @@ endmodule
 
 
 
-module crc32 (
+module crc32_rx (
 	input  wire	rst_n,
 	input  wire load,
 	input  wire	en,
@@ -3071,6 +3328,7 @@ module rhd2164x2_spi_slave_model #(
 	input  wire [n-1:0]	data_tx_b1,	// Data to be transmitted
 	output reg	[n-1:0]	data_rx,	// Data received
 	output wire			tx_load,
+	output wire			word_end,
 	output wire			done		// TX/RX operation completed; no communicacion happening
 );
 
@@ -3081,7 +3339,7 @@ module rhd2164x2_spi_slave_model #(
 	reg miso_a0,miso_b0,miso_a1,miso_b1;
 	wire rx_load,cnt0_is_15;
 
-	
+	assign word_end = cnt0_is_15;
 	
 	// n-counter
 	always@(negedge rstb or posedge sck or posedge csb)
@@ -3105,7 +3363,7 @@ module rhd2164x2_spi_slave_model #(
 
 	always@(negedge rstb or negedge sck)
 		if (!rstb)
-			data_rx <= 0;
+			data_rx <= 16'hff00;
 		else if (rx_load)
 			data_rx <= rx;
 	
