@@ -296,27 +296,35 @@ module tunnel_e2e_tb;
 	integer n_sweeps = 0, n_sent_sweeps = 0, n_repeat = 0, n_skip = 0, n_gap = 0;
 	integer n_stale = 0, n_torn = 0, n_sent_bad = 0, n_sent_missing = 0;
 	integer lost_tag [0:15];				// B5: tags hit by injected errors
+	realtime lost_t [0:15];					// when; the 9-bit tag comes back after 512 SAMPLEs (~20 ms)
 	integer n_lost = 0, n_lost_served = 0;
+	localparam real LOST_WIN_US = 5000.0;	// B5 looks this long after the hit (<< one tag wrap)
 
 	function automatic bit lost(input integer tag);
 		lost = 0;
-		for (int i = 0; i < n_lost; i++) if (lost_tag[i] == tag) lost = 1;
+		for (int i = 0; i < n_lost; i++)
+			if (lost_tag[i] == tag && $realtime - lost_t[i] < LOST_WIN_US * 1000.0) lost = 1;
 	endfunction
 
 	task automatic check_conv(input [5:0] c, input realtime tc);
 		reg [15:0] w [0:3];
 		reg [15:0] v;
 		integer k, tag;
-		bit sent, any_tag;
+		bit sent, any_tag, all_sent;
 		begin
 			w[0] = host.a0; w[1] = host.b0; w[2] = host.a1; w[3] = host.b1;
+			// The sentinel comes on all four words at once (T5.4: one rd_valid).
+			// Decide it per command: chip 1's A word of CONVERT(0) at tag 0 is
+			// {1, 0, 00000, 0} = 8000 = the sentinel value, and is data.
+			all_sent = 1;
+			for (k = 0; k < 4; k = k + 1) if ((w[k] ^ 16'h8000) != 16'h8000) all_sent = 0;
 			n_conv = n_conv + 1;
 			if (c == 0) begin						// a new sweep
 				sw_tag = -1; sw_sent = 0; sw_bad = 0; sw_t0 = tc;
 			end
 			for (k = 0; k < 4; k = k + 1) begin
 				v = w[k] ^ 16'h8000;
-				sent = (v == 16'h8000);
+				sent = all_sent;
 				// B6: TUN_CLK stopped for 6 us before this command: sentinel
 				if (tc > down_from + 6000.0 && tc < down_to && !sent) begin
 					n_sent_missing = n_sent_missing + 1;
@@ -358,7 +366,7 @@ module tunnel_e2e_tb;
 				n_sent_sweeps = n_sent_sweeps + 1;
 				sent_since = 1;
 				// B6: no sentinel on an untouched, locked link
-				if (stageb && sw_t0 > ev_last + RECOVER_US * 1000.0) begin
+				if (stageb && sw_t0 > ev_last + RECOVER_US * 1000.0 && down_to < 1.0e11) begin	// not during an event
 					n_sent_bad = n_sent_bad + 1;
 					if (n_sent_bad <= 5) fail("B6: sentinel sweep on an untouched link");
 				end
@@ -486,7 +494,7 @@ module tunnel_e2e_tb;
 			mark_event();
 			// the tag of the SAMPLE just hit: the payload's own, decoded at its end
 			@(posedge kun.wclk iff kst == 3);
-			if (n_lost < 16) begin lost_tag[n_lost] = ktag; n_lost = n_lost + 1; end
+			if (n_lost < 16) begin lost_tag[n_lost] = ktag; lost_t[n_lost] = $realtime; n_lost = n_lost + 1; end
 		end
 	endtask
 
@@ -667,7 +675,7 @@ module tunnel_e2e_tb;
 			$display("      B: sweeps %0d (sentinel %0d), repeats %0d, skips %0d, gaps after a sentinel %0d",
 				n_sweeps, n_sent_sweeps, n_repeat, n_skip, n_gap);
 			$display("      B: expected slips at %0.0f ppm over %0.1f ms: about %0.1f",
-				ippm, $realtime / 1.0e6, 25.0 * ippm * 1.0e-6 * $realtime / 1.0e3);
+				ippm, $realtime / 1.0e6, 25.0 * ippm * 1.0e-6 * $realtime / 1.0e6);	// 25 frames per ms
 			if (n_conv_bad == 0 && n_torn == 0 && n_stale == 0 && n_lost_served == 0 &&
 			    n_sent_bad == 0 && n_sent_missing == 0 && n_reg_bad == 0 && n_sweeps > 0)
 				pass($sformatf("B1-B7: %0d CONVERT answers, %0d sweeps", n_conv, n_sweeps));
@@ -687,3 +695,15 @@ module tunnel_e2e_tb;
 		$finish;
 	end
 endmodule
+
+// Library binding. Both tops define modules with the same name and
+// different behaviour (crc32: Kuntur's load resets without the byte, the
+// adapter's folds the first byte in), and -L order alone binds every such
+// name to one library. This config makes each top's subtree bind from its
+// own library. Run "tunnel_e2e_cfg", not "tunnel_e2e_tb" (run_e2e.sh).
+config tunnel_e2e_cfg;
+	design work.tunnel_e2e_tb;
+	default liblist work kun adp;
+	instance tunnel_e2e_tb.kun liblist kun;
+	instance tunnel_e2e_tb.adp liblist adp;
+endconfig

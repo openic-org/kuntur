@@ -24,4 +24,4 @@ $Q/vlog -quiet -sv -work kun +incdir+$K +incdir+$K/afe/rhd2164 +incdir+$K/app \
 	"+define+KUNTUR_VARIANT=$V" $K/tb/kuntur_prims_sim.v $K/kuntur_fpga.v
 $Q/vlog -quiet -work adp +incdir+$A +incdir+$K/afe/rhd2164 "+define+KUNTUR_VARIANT=$V" $HERE/adapter_prims_sim.v ${ADAPTER_RTL:-$A/intan_rec_adapter.v}
 $Q/vlog -quiet -sv -work work $K/tb/rhd2164_bfm.v $HERE/intan_master_bfm.v $HERE/tunnel_e2e_tb.sv
-$Q/vsim -c -quiet -L kun -L adp tunnel_e2e_tb $PA "$@" -do "run -all; quit -f" | grep -v "^# \(Loading\|//\)"
+$Q/vsim -c -quiet -L kun -L adp tunnel_e2e_cfg $PA "$@" -do "run -all; quit -f" | grep -v "^# \(Loading\|//\)"

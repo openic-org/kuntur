@@ -27,6 +27,7 @@
 	  - CONVERT(c), c = 0..31: channel c on A, channel c + 32 on B.
 	    CONVERT(63) converts the channel after the last one converted
 	    (wraps 31 -> 0), so the default sampling table walks 0..31.
+	    CONVERT(32..62) does not move that counter.
 	  - READ(r): RAM registers 0..21 as last written, the ROM registers
 	    40..44 ("INTAN"), 48..50 ("RHD"), 59 (0x35 on A, 0x3A on B), 60..63.
 	    Others read 0.
@@ -174,7 +175,8 @@ module rhd2164_bfm #(
 						ch = shift_in[12:8];
 					if (shift_in[13:8] == 6'd0)
 						frame_tag = frame_tag + 9'd1;
-					last_ch = ch;
+					if (shift_in[13:8] < 6'd32 || shift_in[13:8] == 6'd63)
+						last_ch = ch;		// aux CONVERTs (32..62) leave the counter (lvds-tunnel.md §9.6 T5.4 Q5)
 					res_a = sample(1'b0, ch);
 					res_b = sample(1'b1, ch);
 				end

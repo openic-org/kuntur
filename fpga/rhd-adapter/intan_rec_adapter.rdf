@@ -2,7 +2,7 @@
 <RadiantProject version="4.2" radiant="2025.2.1.321.0" title="intan_rec_adapter" device="LIFCL-40-9BG400C" performance_grade="9_High-Performance_1.0V" family_int="je5d00" device_int="je5d30" package_int="CABGA400" operation_int="COM" speed_int="12" default_implementation="impl_1">
     <Options/>
     <Implementation title="impl_1" dir="impl_1" description="impl_1" synthesis="lse" default_strategy="Strategy1">
-        <Options def_top="intan_rec_adapter" top="intan_rec_adapter"/>
+        <Options VERILOG_DIRECTIVES="KUNTUR_VARIANT=4'd2" def_top="intan_rec_adapter" top="intan_rec_adapter"/>
         <Source name="source/impl_1/intan_rec_adapter.v" type="Verilog" type_short="Verilog">
             <Options top_module="intan_rec_adapter"/>
         </Source>
