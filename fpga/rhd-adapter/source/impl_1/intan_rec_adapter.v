@@ -84,7 +84,7 @@ module intan_rec_adapter (
 
 
 	wire gddr_rdy, gddr_ddr_rst, gddr_stop;
-	wire rst_n_sup, lock_sync, gddr_rst, cdr_rstb, rst_n_emu;
+	wire rst_n_sup, lock_sync, gddr_rst, cdr_rstb, rst_n_emu, rst_n_w;
 	// Reset generation 
 	reset_gen_adapter rst_gen_0 (
 		// inputs
@@ -98,7 +98,8 @@ module intan_rec_adapter (
 		.lock_sync	(lock_sync),
 		.gddr_rst	(gddr_rst),
 		.cdr_rstb	(cdr_rstb),
-		.rst_n_emu	(rst_n_emu)
+		.rst_n_emu	(rst_n_emu),
+		.rst_n_w	(rst_n_w)
 	);
 		
 	gddr_sync u_gddr_sync (
@@ -177,7 +178,7 @@ module intan_rec_adapter (
 		.STOP_EN ("ENABLE")
 	) eclksync_0 (
 		.ECLKIN  (kuntur_clk_os),  // I
-		.STOP    (gddr_stop),  // I
+		.STOP    (gddr_stop || !lock_sync),  // I
 		.ECLKOUT (eclk)   // O
 	);
 
@@ -451,7 +452,7 @@ module intan_rec_adapter (
 	
 	cfg_sync cfg_sync_0 (
 		// inputs - wclk
-		.rstb_w	(cdr_rstb),
+		.rstb_w	(rst_n_w),
 		.wclk	(wclk),
 		.cfg_strobe	(fpa_cfg_strobe),
 		.cfg_regs	(fpa_cfg_regs),	// 176b
@@ -471,7 +472,7 @@ module intan_rec_adapter (
 	
 	triple_buffer triple_buffer_0 (
 		// inputs - wclk
-		.rstb_w	(cdr_rstb),		// cdr_rstb
+		.rstb_w	(rst_n_w),
 		.wclk	(wclk),
 		.buf_we	(fpa_buf_we),
 		.buf_waddr	(fpa_buf_waddr),
@@ -509,7 +510,7 @@ module intan_rec_adapter (
 		// inputs - TUN_CLK side
 		.tclk	(kuntur_clk),
 		// inputs - wclk side
-		.rstb_w	(cdr_rstb),
+		.rstb_w	(rst_n_w),
 		.wclk	(wclk),
 		.smp_commit	(fpa_smp_commit),
 		.locked	(frx_locked),
@@ -3573,7 +3574,8 @@ module reset_gen_adapter (
 	output reg	lock_sync,	// Active high, CLKIN domain
 	output reg	gddr_rst,	// Active high, CLKIN domain
 	output reg	cdr_rstb,	// Active low, WCLK domain
-	output wire	rst_n_emu	// Async active-low reset to SCK domain
+	output wire	rst_n_emu,	// Async active-low reset to SCK domain
+	output reg rst_n_w		// Active low, WCLk domain
 );
 	
 	
@@ -3649,6 +3651,24 @@ module reset_gen_adapter (
 	
 	assign rst_n_emu = rstb;
 	
+	
+	// ***************************************
+	// rst_n_w generation - BEGIN
+	// ***************************************
+	reg rst_n_w_1;
+	wire rst_go_w;
+	
+	assign rst_go_w = rstb && rst_n_sup;
+	
+	always@(negedge rst_go_w or posedge wclk)
+		if (!rst_go_w) begin
+			rst_n_w <= 1'b0;
+			rst_n_w_1 <= 1'b0;
+		end
+		else begin
+			rst_n_w <= rst_n_w_1;
+			rst_n_w_1 <= 1'b1;
+		end
 
 endmodule
 

@@ -59,10 +59,21 @@
 //	      was locked (adp.frame_rx_0.locked): one sent before the lock never
 //	      reaches the adapter, and the next comes with the 40 ms refresh.
 //	      (Fixed 2026-11-26: B7 expected the start-up CONFIG, sent 0.5 ms
-//	      before the adapter locked.)
+//	      before the adapter locked.) Judged during link events as well:
+//	      the values must survive a cable-out and a Kuntur reset (T5.5 Q7).
+//	      B7 needs at least one READ judged against a delivered CONFIG,
+//	      and one during an event.
+//	  W1  (both stages, added 2026-11-26) wclk stops cleanly: every wclk
+//	      phase lasts at least 20 ns (an ECLK period is 26.35 ns), and
+//	      ECLKDIV.DIVRST rises only with ECLK quiet for 40 ns
+//	      (lvds-tunnel.md §6.4: ECLKSYNC.STOP = gddr_stop || !lock_sync).
+//	      The blocks on rst_n_w run through a lock drop (system-startup.md
+//	      G9), so a runt wclk would corrupt them.
 //	  Scenario: power-up; scan; stream; 1 bit-error frame; 8 consecutive
 //	  bit-error frames (unlock and re-hunt at the same phase, R1); cable
-//	  out 200 us; Kuntur rstb 100 us; stream to the end.
+//	  out 200 us; Kuntur rstb 100 us; PLL lock low 2 us with TUN_CLK
+//	  running (2026-11-26: the lock drop that leaves ECLK running, W1);
+//	  stream to the end.
 //
 //	Plusargs
 //	  +stageb           stage B (else A)
@@ -282,6 +293,7 @@ module tunnel_e2e_tb;
 	realtime t_hist [0:3];
 	integer n_rom = 0, n_rom_bad = 0, n_wr = 0, n_wr_bad = 0, n_reg = 0, n_reg_bad = 0;
 	integer n_reg_cfg = 0;						// B7: READs judged against a delivered CONFIG
+	integer n_reg_ev = 0;						// B7: of those, within RECOVER_US of a link event
 	integer n_conv = 0, n_conv_bad = 0, n_const = 0;
 	integer run_bad = 0;					// A2: wrong answers in the current run
 
@@ -445,15 +457,18 @@ module tunnel_e2e_tb;
 					end
 					else if (r <= 21) begin
 						n_reg = n_reg + 1;
-						// B7: 0 before any CONFIG has left Kuntur; the last one's
-						// value once it has had LAT_US to arrive; not judged in
-						// between, nor while the link recovers from an event
+						// B7: 0 before the first deliverable CONFIG; the last
+						// one's value once it has had LAT_US to arrive; not
+						// judged in between. Judged during and after link
+						// events too: the values must survive a cable-out and
+						// a Kuntur reset (T5.5 Q7; rst_n_w, 2026-11-26)
 						if (stageb && judge && (ncd == 0 || tc > cfg_end + LAT_US * 1000.0)) begin
 							exp_a = (ncd == 0) ? 16'h0000 : {8'h00, cfg_dl[r]};
 							if (ncd > 0) n_reg_cfg = n_reg_cfg + 1;
+							if (ncd > 0 && tc <= ev_last + RECOVER_US * 1000.0) n_reg_ev = n_reg_ev + 1;
 							begin
 								ok = host.a0 == exp_a && host.b0 == exp_a && host.a1 == exp_a && host.b1 == exp_a;
-								if (!ok && tc > ev_last + RECOVER_US * 1000.0) begin
+								if (!ok) begin
 									n_reg_bad = n_reg_bad + 1;
 									if (n_reg_bad <= 5)
 										fail($sformatf("B7: READ(%0d) = %h %h / %h %h, expected %h (%0d CONFIGs seen, %0d deliverable)",
@@ -529,6 +544,35 @@ module tunnel_e2e_tb;
 		down_to = $realtime;
 		mark_event();
 	endtask
+
+	// a lock drop with TUN_CLK (and so ECLK) running: jitter, or a PLL
+	// that keeps running without its reference (W1, B7)
+	task automatic pll_unlock(input real us);
+		mark_event();
+		adp.pllcdr.unlock = 1'b1;
+		#(us * 1000.0);
+		adp.pllcdr.unlock = 1'b0;
+		mark_event();
+	endtask
+
+	// W1: wclk stops cleanly
+	realtime w1_wt = -1.0, w1_et = -1.0e9;
+	integer n_w1 = 0, n_divrst = 0;
+	always @(adp.eclk) w1_et = $realtime;
+	always @(adp.wclk) begin
+		if (w1_wt > 0.0 && $realtime - w1_wt < 20.0) begin
+			n_w1 = n_w1 + 1;
+			if (n_w1 <= 5) fail($sformatf("W1: wclk phase of %.2f ns (a runt)", $realtime - w1_wt));
+		end
+		w1_wt = $realtime;
+	end
+	always @(posedge adp.gddr_ddr_rst) if ($realtime > 0.0) begin	// not the X -> 1 at t = 0
+		n_divrst = n_divrst + 1;
+		if ($realtime - w1_et < 40.0) begin
+			n_w1 = n_w1 + 1;
+			if (n_w1 <= 5) fail($sformatf("W1: DIVRST rose %.2f ns after an ECLK edge (ECLK not stopped)", $realtime - w1_et));
+		end
+	end
 
 	// A1/A4: cdr ends valid within a timeout
 	task automatic wait_cdr(input string what, input real ms);
@@ -683,6 +727,8 @@ module tunnel_e2e_tb;
 			// B6
 			fork cable_out(200.0); stream(300); join
 			fork kuntur_reset(100.0); stream(400); join
+			fork pll_unlock(2.0); stream(300); join
+			if (n_divrst == 0) fail("W1: no DIVRST seen");
 			stream(periods);
 			$display("      B: sweeps %0d (sentinel %0d), repeats %0d, skips %0d, gaps after a sentinel %0d",
 				n_sweeps, n_sent_sweeps, n_repeat, n_skip, n_gap);
@@ -695,8 +741,10 @@ module tunnel_e2e_tb;
 				fail("B5: errors injected, but no sentinel sweep");
 			if (n_reg_cfg == 0)
 				fail($sformatf("B7: no READ(0..21) judged against a delivered CONFIG (%0d CONFIGs, %0d deliverable)", nc, ncd));
+			else if (n_reg_ev == 0)
+				fail("B7: no READ(0..21) judged during a link event");
 			else
-				$display("      B: READ(0..21) judged against a delivered CONFIG: %0d (%0d CONFIGs, %0d deliverable)", n_reg_cfg, nc, ncd);
+				$display("      B: READ(0..21) judged against a delivered CONFIG: %0d, %0d of them during link events (%0d CONFIGs, %0d deliverable)", n_reg_cfg, n_reg_ev, nc, ncd);
 		end
 
 		$display("%s", (fails == 0) ? "tunnel_e2e_tb: ALL PASS" : $sformatf("tunnel_e2e_tb: %0d FAIL", fails));
