@@ -334,6 +334,7 @@ module intan_rec_adapter (
 	wire [63:0] fpa_sts_answer;
 	wire [31:0] fpa_sts_fifo0_overflow, fpa_frames_received, fpa_frames_crc_failed, fpa_frame_index_gaps, fpa_frames_cut;
 	reg frx_lock, lock_sync_reg;
+	wire frx_locked;
 
 	// T5
 	
@@ -371,7 +372,7 @@ module intan_rec_adapter (
 		.dout		(frx_dout),
 		.hdr_start	(frx_hdr_start),
 		.dout_en	(),
-		.locked		(),
+		.locked		(frx_locked),
 		.stepping	(),
 		.bitsel		(),
 		.relocks	()		
@@ -412,8 +413,11 @@ module intan_rec_adapter (
 	
 	
 	wire [15:0] emu_rd_a0, emu_rd_b0, emu_rd_a1, emu_rd_b1;
-	wire emu_rd_valid, emu_frame_start;
+	wire emu_rd_valid, emu_frame_start, emu_cmd_strobe, emu_cfg_valid_s;
 	wire [4:0] emu_rd_slot;
+	wire [15:0] emu_data_rx_q;
+	wire [175:0] emu_cfg_regs_s;
+	wire lm_link_down;
 	
 	
 	emu_answer emu_answer_0 (
@@ -430,8 +434,8 @@ module intan_rec_adapter (
 		.rd_a1	(emu_rd_a1),	// 16b
 		.rd_b1	(emu_rd_b1),	// 16b
 		.rd_valid	(emu_rd_valid),
-		.cfg_regs_s	(176'd0),	// 176b
-		.cfg_valid_s	(1'b0),
+		.cfg_regs_s	(emu_cfg_regs_s),	// 176b
+		.cfg_valid_s	(emu_cfg_valid_s),
 		.word_end	(spi0_word_end),
 		// outpus
 		.data_tx_a0	(spi0_data_tx_a0),	// 16b
@@ -440,11 +444,28 @@ module intan_rec_adapter (
 		.data_tx_b1	(spi0_data_tx_b1),	// 16b
 		.frame_start	(emu_frame_start),
 		.rd_slot	(emu_rd_slot),	// 5b
-		.cmd_strobe	()
+		.cmd_strobe	(emu_cmd_strobe),
+		.data_rx_q	(emu_data_rx_q)	// 16b
 	);
 	
 	
-		
+	cfg_sync cfg_sync_0 (
+		// inputs - wclk
+		.rstb_w	(cdr_rstb),
+		.wclk	(wclk),
+		.cfg_strobe	(fpa_cfg_strobe),
+		.cfg_regs	(fpa_cfg_regs),	// 176b
+		// inputs - sck
+		.rstb_s	(rst_n_emu),
+		.sck	(spi0_sck),
+		.data_rx_q	(emu_data_rx_q),	// 16b
+		.cmd_strobe	(emu_cmd_strobe),
+		// outputs - sck
+		.cfg_regs_s	(emu_cfg_regs_s),	// 176b
+		.cfg_valid_s	(emu_cfg_valid_s),
+		.host_write_changes	(),	// 32b
+		.host_mismatch_regs	()	//22b
+	);
 		
 		
 	
@@ -464,7 +485,7 @@ module intan_rec_adapter (
 		.sck	(spi0_sck),		// spi0_sck
 		.frame_start	(emu_frame_start),
 		.rd_slot	(emu_rd_slot),	// CONVERT(C), C= 0...31
-		.link_down	(1'b0),
+		.link_down	(lm_link_down),
 		// outputs - sclk
 		.rd_a0	(emu_rd_a0),
 		.rd_b0	(emu_rd_b0),
@@ -477,12 +498,340 @@ module intan_rec_adapter (
 		.slip_skip	(),
 		.frames_sentinel_served	()
 	);
+	
+	
+	
+	link_mon link_mon_0 (
+		// inputs - clk side
+		.rstb_c	(rst_n_sup),
+		.clk	(clkin),
+		.pll_lock_s	(lock_sync),
+		// inputs - TUN_CLK side
+		.tclk	(kuntur_clk),
+		// inputs - wclk side
+		.rstb_w	(cdr_rstb),
+		.wclk	(wclk),
+		.smp_commit	(fpa_smp_commit),
+		.locked	(frx_locked),
+		// outputs - clk domain
+		.link_down	(lm_link_down),
+		.down_events	(),
+		.down_cause	()
+	);
 
 
 
 
 endmodule
 
+
+
+
+
+
+
+module link_mon (
+	// inputs - clk side
+	input  wire	rstb_c,
+	input  wire	clk,
+	input  wire	pll_lock_s,
+	// inputs - TUN_CLK side
+	input  wire	tclk,
+	// inputs - wclk side
+	input  wire	rstb_w,
+	input  wire	wclk,
+	input  wire	smp_commit,
+	input  wire	locked,
+	
+	// outputs - clk domain
+	output reg	link_down,
+	output reg	[31:0]	down_events,
+	output reg	[3:0]	down_cause
+);
+	
+	
+	// Heartbeat counter - tclk
+	reg [5:0] hb_cnt;
+	wire hb;
+	
+	always@(negedge rstb_c or posedge tclk)
+		if (!rstb_c)
+			hb_cnt <= 6'd0;
+		else
+			hb_cnt <= hb_cnt + 6'd1;
+			
+	assign hb = hb_cnt[5];
+	
+	
+	// Heartbeat watchdog - clk
+	reg hb_s, hb_s1, hb_d;
+	reg [5:0] hb_tmr;
+	wire hb_lost;
+	
+	always@(negedge rstb_c or posedge clk)
+		if (!rstb_c) begin
+			hb_s <= 1'b0; hb_s1 <= 1'b0;
+			hb_d <= 1'b0;
+			hb_tmr <= 6'd48;
+		end
+		else begin
+			hb_s <= hb_s1; hb_s1 <= hb;
+			hb_d <= hb_s;
+			if (hb_s != hb_d)
+				hb_tmr <= 6'd0;
+			else if (hb_tmr != 6'd48)
+				hb_tmr <= hb_tmr + 6'd1;
+		end
+	
+	assign hb_lost = (hb_tmr == 6'd48);
+	
+	
+	// No good sample for 1ms - wclk to clk
+	reg smp_t, smp_s, smp_s1, smp_d;
+	reg [13:0] smp_tmr;
+	wire smp_lost;
+	
+	always@(negedge rstb_w or posedge wclk)
+		if (!rstb_w)
+			smp_t <= 1'b0;
+		else if (smp_commit)
+			smp_t <= ~smp_t;
+	
+	
+	always@(negedge rstb_c or posedge clk)
+		if (!rstb_c) begin
+			smp_s <= 1'b0; smp_s1 <= 1'b0;
+			smp_d <= 1'b0;
+			smp_tmr <= 14'd12000;
+		end
+		else begin
+			smp_s <= smp_s1; smp_s1 <= smp_t;
+			smp_d <= smp_s;
+			if (smp_s != smp_d)
+				smp_tmr <= 14'd0;
+			else if (smp_tmr != 14'd12000)
+				smp_tmr <= smp_tmr + 14'd1;
+		end
+		
+	assign smp_lost = (smp_tmr == 14'd12000);
+	
+	
+	// locked - wclk to clk
+	reg locked_s, locked_s1;
+	
+	always@(negedge rstb_c or posedge clk)
+		if (!rstb_c) begin
+			locked_s <= 1'b0; locked_s1 <= 1'b0;
+		end
+		else begin
+			locked_s <= locked_s1; locked_s1 <= locked;
+		end
+	
+	
+	// link_down & down_cause
+	
+	always@(negedge rstb_c or posedge clk)
+		if (!rstb_c) begin
+			link_down <= 1'b1;
+			down_cause <= 4'b1111;
+		end
+		else begin
+			link_down <= ( hb_lost | smp_lost | !locked_s | !pll_lock_s  );
+			down_cause <= { smp_lost, !locked_s, !pll_lock_s, hb_lost  };
+		end
+	
+	
+	// down_events
+	reg ld_d;
+	
+	always@(negedge rstb_c or posedge clk)
+		if (!rstb_c) begin
+			ld_d <= 1'b1;
+			down_events <= 32'd0;
+		end
+		else begin
+			ld_d <= link_down;
+			if (link_down && !ld_d)
+				if (down_events != 32'hffffffff)
+					down_events <= down_events + 32'd1;
+		end
+	
+	
+
+endmodule
+
+
+
+
+
+
+
+
+module cfg_sync (
+	// inputs - wclk
+	input  wire	rstb_w,
+	input  wire	wclk,
+	input  wire	cfg_strobe,
+	input  wire	[175:0]	cfg_regs,	// 176b
+	// inputs - sck
+	input  wire	rstb_s,
+	input  wire	sck,
+	input  wire	[15:0]	data_rx_q,	// 16b
+	input  wire	cmd_strobe,
+	// outputs - sck
+	output reg	[175:0]	cfg_regs_s,	// 176b
+	output reg	cfg_valid_s,
+	output reg	[31:0]	host_write_changes,	// 32b
+	output wire	[21:0]	host_mismatch_regs	//22b
+);
+
+	
+	reg ack_w, ack_w_0, req, again;
+	wire pending;
+	reg [175:0] cfg_hold;
+	reg req_s1, req_s, req_d;
+	wire ack;
+	
+	
+	// crossings, wclk side
+	
+	always@(negedge rstb_w or posedge wclk)
+		if (!rstb_w) begin
+			ack_w <= 1'b0; ack_w_0 <= 1'b0;
+			req <= 1'b0;
+			again <= 1'b0;
+			cfg_hold <= 176'd0;
+		end
+		else begin
+			ack_w <= ack_w_0; ack_w_0 <= ack;
+			if (cfg_strobe && !pending) begin
+				cfg_hold <= cfg_regs;
+				req <= ~req;
+				again <= 1'b0;
+			end
+			else if (cfg_strobe && pending) begin
+				again <= 1'b1;
+			end
+			else if (!pending && again) begin
+				cfg_hold <= cfg_regs;
+				req <= ~req;
+				again <= 1'b0;
+			end
+		end
+	
+	assign pending = req ^ ack_w;
+
+	// crossings, sck side
+	
+	always@(negedge rstb_s or posedge sck)
+		if (!rstb_s) begin
+			req_s <= 1'b0; req_s1 <= 1'b0;
+			req_d <= 1'b0;
+			cfg_regs_s <= 176'd0;
+			cfg_valid_s <= 1'b0;
+		end
+		else begin
+			req_s <= req_s1; req_s1 <= req;
+			req_d <= req_s;
+			
+			if (req_s != req_d) begin
+				cfg_regs_s <= cfg_hold;
+				cfg_valid_s <= 1'b1;
+			end
+			
+		end
+	
+	assign ack = req_d;
+	
+	// host shadow
+	
+	wire [1:0] code;
+	wire [5:0] r;
+	wire [7:0] d;
+	reg [7:0] host_shadow [0:21];
+	reg [21:0] host_written;
+	
+	assign code = data_rx_q[15:14];
+	assign r = data_rx_q[13:8];
+	assign d = data_rx_q[7:0];
+
+	
+	always@(negedge rstb_s or posedge sck)
+		if (!rstb_s) begin
+			host_shadow[0] <= 8'd0; host_shadow[1] <= 8'd0; host_shadow[2] <= 8'd0; host_shadow[3] <= 8'd0; host_shadow[4] <= 8'd0;
+			host_shadow[5] <= 8'd0; host_shadow[6] <= 8'd0; host_shadow[7] <= 8'd0; host_shadow[8] <= 8'd0; host_shadow[9] <= 8'd0;
+			host_shadow[10] <= 8'd0; host_shadow[11] <= 8'd0; host_shadow[12] <= 8'd0; host_shadow[13] <= 8'd0; host_shadow[14] <= 8'd0;
+			host_shadow[15] <= 8'd0; host_shadow[16] <= 8'd0; host_shadow[17] <= 8'd0; host_shadow[18] <= 8'd0; host_shadow[19] <= 8'd0;
+			host_shadow[20] <= 8'd0; host_shadow[21] <= 8'd0;
+			host_written <= 22'd0;
+			host_write_changes <= 32'd0;
+		end
+		else begin
+			if ( cmd_strobe && (code == `RHD_WRITE_CODE) && (r <= 6'd21) ) begin
+				if ( !host_written[r] || (host_shadow[r] != d) ) begin
+					if (host_write_changes != 32'hffffffff)
+						host_write_changes <= host_write_changes + 32'd1;
+					host_shadow[r] <= d;
+					host_written[r] <= 1'b1;
+				end
+			end
+		end
+	
+	
+	// host_mismatch_regs
+	
+	reg [7:0] cfg_regs_s_byte [0:21];
+	genvar j;
+	
+	always@(*) begin
+		cfg_regs_s_byte[6'd0] = cfg_regs_s[7:0];
+		cfg_regs_s_byte[6'd1] = cfg_regs_s[15:8];
+		cfg_regs_s_byte[6'd2] = cfg_regs_s[23:16];
+		cfg_regs_s_byte[6'd3] = cfg_regs_s[31:24];
+		cfg_regs_s_byte[6'd4] = cfg_regs_s[39:32];
+		cfg_regs_s_byte[6'd5] = cfg_regs_s[47:40];
+		cfg_regs_s_byte[6'd6] = cfg_regs_s[55:48];
+		cfg_regs_s_byte[6'd7] = cfg_regs_s[63:56];
+		cfg_regs_s_byte[6'd8] = cfg_regs_s[71:64];
+		cfg_regs_s_byte[6'd9] = cfg_regs_s[79:72];
+		cfg_regs_s_byte[6'd10] = cfg_regs_s[87:80];
+		cfg_regs_s_byte[6'd11] = cfg_regs_s[95:88];
+		cfg_regs_s_byte[6'd12] = cfg_regs_s[103:96];
+		cfg_regs_s_byte[6'd13] = cfg_regs_s[111:104];
+		cfg_regs_s_byte[6'd14] = cfg_regs_s[119:112];
+		cfg_regs_s_byte[6'd15] = cfg_regs_s[127:120];
+		cfg_regs_s_byte[6'd16] = cfg_regs_s[135:128];
+		cfg_regs_s_byte[6'd17] = cfg_regs_s[143:136];
+		cfg_regs_s_byte[6'd18] = cfg_regs_s[151:144];
+		cfg_regs_s_byte[6'd19] = cfg_regs_s[159:152];
+		cfg_regs_s_byte[6'd20] = cfg_regs_s[167:160];
+		cfg_regs_s_byte[6'd21] = cfg_regs_s[175:168];
+	end
+	
+	generate
+		for (j = 0; j < 3; j = j+1 ) begin: gen_host_mismatch_regs_0
+			
+			assign host_mismatch_regs[j] = ( cfg_valid_s && host_written[j] && ( host_shadow[j] != cfg_regs_s_byte[j] ) );
+			
+		end
+		for (j = 4; j < 6; j = j+1 ) begin: gen_host_mismatch_regs_1
+			
+			assign host_mismatch_regs[j] = ( cfg_valid_s && host_written[j] && ( host_shadow[j] != cfg_regs_s_byte[j] ) );
+			
+		end
+		for (j = 7; j < 22; j = j+1 ) begin: gen_host_mismatch_regs_2
+			
+			assign host_mismatch_regs[j] = ( cfg_valid_s && host_written[j] && ( host_shadow[j] != cfg_regs_s_byte[j] ) );
+			
+		end
+	endgenerate
+	
+	assign host_mismatch_regs[3] = 1'b0;
+	assign host_mismatch_regs[6] = 1'b0;
+	
+	
+
+endmodule
 
 
 
@@ -515,7 +864,8 @@ module emu_answer (
 	output reg	[15:0]	data_tx_b1,	// 16b
 	output reg	frame_start,
 	output reg	[4:0]	rd_slot,	// 5b
-	output wire	cmd_strobe
+	output wire	cmd_strobe,
+	output reg	[15:0]	data_rx_q	// 16b
 );
 
 
@@ -524,7 +874,6 @@ module emu_answer (
 	wire [1:0] code, code_raw;
 	wire [5:0] c, c_raw;
 	reg [4:0] c_last;
-	reg [15:0] data_rx_q;
 	
 	
 	// data_rx input register

@@ -52,9 +52,14 @@
 //	      out, Kuntur reset) every word is the sentinel, mid sweep included,
 //	      until the clock is back; and no sentinel at all when nothing was
 //	      done to the link for RECOVER_US.
-//	  B7  READ(0..21) (R4): 0 before the first CONFIG has left Kuntur, then
-//	      the values in the last CONFIG that left Kuntur (decoded on its
-//	      wire, so a wrong CONFIG and a wrong replication are told apart).
+//	  B7  READ(0..21) (R4): 0 before the first deliverable CONFIG, then the
+//	      values in the last deliverable CONFIG (decoded on Kuntur's wire,
+//	      so a wrong CONFIG and a wrong replication are told apart). A
+//	      CONFIG is deliverable if it left Kuntur while the adapter's T5.1
+//	      was locked (adp.frame_rx_0.locked): one sent before the lock never
+//	      reaches the adapter, and the next comes with the 40 ms refresh.
+//	      (Fixed 2026-11-26: B7 expected the start-up CONFIG, sent 0.5 ms
+//	      before the adapter locked.)
 //	  Scenario: power-up; scan; stream; 1 bit-error frame; 8 consecutive
 //	  bit-error frames (unlock and re-hunt at the same phase, R1); cable
 //	  out 200 us; Kuntur rstb 100 us; stream to the end.
@@ -200,7 +205,8 @@ module tunnel_e2e_tb;
 	reg [8:0] s_tag [0:NS-1];
 	realtime s_end [0:NS-1];
 	integer nc = 0;							// CONFIGs seen
-	reg [7:0] cfg_now [0:21], cfg_rx [0:21];
+	reg [7:0] cfg_now [0:21], cfg_rx [0:21], cfg_dl [0:21];
+	integer ncd = 0;						// deliverable CONFIGs seen (B7)
 	realtime cfg_end = 0.0;
 	event sample_payload;					// a SAMPLE's payload starts (B5)
 	reg [31:0] ksh = 32'd0;
@@ -241,8 +247,12 @@ module tunnel_e2e_tb;
 					end
 					else if (ktype == 8'h02) begin
 						for (int r = 0; r < 22; r++) cfg_now[r] = cfg_rx[r];
-						cfg_end = $realtime;
 						nc = nc + 1;
+						if (adp.frame_rx_0.locked === 1'b1) begin
+							for (int r = 0; r < 22; r++) cfg_dl[r] = cfg_rx[r];
+							cfg_end = $realtime;
+							ncd = ncd + 1;
+						end
 					end
 					kst = 0; ksh = 32'd0;
 				end
@@ -271,6 +281,7 @@ module tunnel_e2e_tb;
 	reg [15:0] c_hist [0:3];
 	realtime t_hist [0:3];
 	integer n_rom = 0, n_rom_bad = 0, n_wr = 0, n_wr_bad = 0, n_reg = 0, n_reg_bad = 0;
+	integer n_reg_cfg = 0;						// B7: READs judged against a delivered CONFIG
 	integer n_conv = 0, n_conv_bad = 0, n_const = 0;
 	integer run_bad = 0;					// A2: wrong answers in the current run
 
@@ -437,15 +448,16 @@ module tunnel_e2e_tb;
 						// B7: 0 before any CONFIG has left Kuntur; the last one's
 						// value once it has had LAT_US to arrive; not judged in
 						// between, nor while the link recovers from an event
-						if (stageb && judge && (nc == 0 || tc > cfg_end + LAT_US * 1000.0)) begin
-							exp_a = (nc == 0) ? 16'h0000 : {8'h00, cfg_now[r]};
+						if (stageb && judge && (ncd == 0 || tc > cfg_end + LAT_US * 1000.0)) begin
+							exp_a = (ncd == 0) ? 16'h0000 : {8'h00, cfg_dl[r]};
+							if (ncd > 0) n_reg_cfg = n_reg_cfg + 1;
 							begin
 								ok = host.a0 == exp_a && host.b0 == exp_a && host.a1 == exp_a && host.b1 == exp_a;
 								if (!ok && tc > ev_last + RECOVER_US * 1000.0) begin
 									n_reg_bad = n_reg_bad + 1;
 									if (n_reg_bad <= 5)
-										fail($sformatf("B7: READ(%0d) = %h %h / %h %h, expected %h (%0d CONFIGs seen)",
-											r, host.a0, host.b0, host.a1, host.b1, exp_a, nc));
+										fail($sformatf("B7: READ(%0d) = %h %h / %h %h, expected %h (%0d CONFIGs seen, %0d deliverable)",
+											r, host.a0, host.b0, host.a1, host.b1, exp_a, nc, ncd));
 								end
 							end
 						end
@@ -681,6 +693,10 @@ module tunnel_e2e_tb;
 				pass($sformatf("B1-B7: %0d CONVERT answers, %0d sweeps", n_conv, n_sweeps));
 			if (n_lost > 0 && n_sent_sweeps == 0)
 				fail("B5: errors injected, but no sentinel sweep");
+			if (n_reg_cfg == 0)
+				fail($sformatf("B7: no READ(0..21) judged against a delivered CONFIG (%0d CONFIGs, %0d deliverable)", nc, ncd));
+			else
+				$display("      B: READ(0..21) judged against a delivered CONFIG: %0d (%0d CONFIGs, %0d deliverable)", n_reg_cfg, nc, ncd);
 		end
 
 		$display("%s", (fails == 0) ? "tunnel_e2e_tb: ALL PASS" : $sformatf("tunnel_e2e_tb: %0d FAIL", fails));
