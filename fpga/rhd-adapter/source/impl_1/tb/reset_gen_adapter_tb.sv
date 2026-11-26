@@ -23,6 +23,10 @@
 //	             After every lock drop that lock_sync saw, READY returns.
 //	  cdr_rstb   initial 0; 0 at once when rst_n_sup or READY falls, with
 //	             no wclk edge; released on a wclk edge after 2..3 edges.
+//	  rst_n_w    (G9, added 2026-11-26) initial 0; 0 at once when rst_n_sup
+//	             falls; released on a wclk edge after 2..3 edges of
+//	             rst_n_sup high; never falls while rst_n_sup = 1, so not
+//	             with a lock drop, READY or a stopped wclk.
 //	  rst_n_emu  = rstb at all times, from t = 0, with no clock at all:
 //	             never touched by lock, READY or wclk.      (R-C1, R-C2)
 //	  Each scenario ends with the receiver out of reset (cdr_rstb = 1).
@@ -48,6 +52,10 @@
 //	  6 lock_sync initial value 1
 //	  7 lock_sync through 1 flop
 //	  8 lock_sync not cleared by rstb (initial value only)
+//	  10 rst_n_w = cdr_rstb (falls with READY)
+//	  11 rst_n_w through 1 wclk flop
+//	  12 rst_n_w asserted synchronously
+//	  13 rst_n_w released with READY as well (rst_n_sup && gddr_rdy)
 //
 //	Run (Icarus, from this directory):
 //	  K=../../../../headstage/source/impl_1
@@ -70,7 +78,7 @@ module reset_gen_adapter_tb;
 
 	reg rstb = 1, pll_lock = 0, tun_on = 0, clkin_en = 1;
 	reg clkin = 0, wclk = 0;
-	wire rst_n_sup, lock_sync, gddr_rst, cdr_rstb, rst_n_emu;
+	wire rst_n_sup, lock_sync, gddr_rst, cdr_rstb, rst_n_w, rst_n_emu;
 	wire gddr_stop, gddr_ddr_reset, gddr_ready;
 	integer errors = 0, seed = 1, ready_falls = 0;
 
@@ -82,7 +90,7 @@ module reset_gen_adapter_tb;
 		.clkin(clkin), .rstb(rstb), .pll_lock(pll_lock),
 		.wclk(wclk), .gddr_rdy(gddr_ready),
 		.rst_n_sup(rst_n_sup), .lock_sync(lock_sync), .gddr_rst(gddr_rst),
-		.cdr_rstb(cdr_rstb), .rst_n_emu(rst_n_emu));
+		.cdr_rstb(cdr_rstb), .rst_n_w(rst_n_w), .rst_n_emu(rst_n_emu));
 
 	// 1 ps on gddr_sync's RST stands in for GSR: at t = 0 gddr_rst is
 	// already 1 before the IP's always block is armed, which would leave
@@ -111,6 +119,8 @@ module reset_gen_adapter_tb;
 		dut.gddr_rst     = 1'b1;
 		dut.cdr_rstb_1   = 1'b0;
 		dut.cdr_rstb     = 1'b0;
+		dut.rst_n_w_1    = 1'b0;
+		dut.rst_n_w      = 1'b0;
 	end
 `endif
 
@@ -119,6 +129,15 @@ module reset_gen_adapter_tb;
 		chk_sup (.clk(clkin), .cond(rstb), .rst_n(rst_n_sup));
 	rst_check #(.NAME("cdr_rstb"), .MIN(2), .MAX(3))
 		chk_cdr (.clk(wclk), .cond(rst_n_sup && gddr_ready), .rst_n(cdr_rstb));
+	rst_check #(.NAME("rst_n_w"), .MIN(2), .MAX(3))
+		chk_w (.clk(wclk), .cond(rst_n_sup), .rst_n(rst_n_w));
+
+	// G9: rst_n_w never falls while the supervisor is out of reset: a lock
+	// drop, a READY fall or a stopped wclk must not reset the wclk state
+	integer w_kept = 0;
+	always @(negedge rst_n_w)
+		if ($realtime > 0.001 && rst_n_sup !== 1'b0) fail("rst_n_w fell with rst_n_sup = 1");
+	always @(negedge gddr_ready) if (rst_n_w === 1'b1 && rst_n_sup === 1'b1) w_kept = w_kept + 1;
 
 	task fail(input [8*64-1:0] what);
 		begin errors = errors + 1; $display("%t  FAIL  %0s", $realtime, what); end
@@ -256,8 +275,10 @@ module reset_gen_adapter_tb;
 		kuntur_on;
 		expect_up("SW2 with cable out");
 
-		if (errors + chk_sup.errors + chk_cdr.errors)
-			$display("FAIL (%0d)", errors + chk_sup.errors + chk_cdr.errors);
+		if (!$test$plusargs("late_clkin") && !$test$plusargs("early_kuntur") && w_kept < 2)
+			fail("G9 coverage: rst_n_w not up through 2 READY falls");
+		if (errors + chk_sup.errors + chk_cdr.errors + chk_w.errors)
+			$display("FAIL (%0d)", errors + chk_sup.errors + chk_cdr.errors + chk_w.errors);
 		else
 			$display("PASS");
 		$finish;
@@ -282,6 +303,7 @@ module reset_gen_adapter (
 	output wire lock_sync,
 	output wire gddr_rst,
 	output wire cdr_rstb,
+	output wire rst_n_w,
 	output wire rst_n_emu
 );
 	localparam SUP_CYCLES = 20;
@@ -329,6 +351,19 @@ module reset_gen_adapter (
 			else cs <= {cs[0], 1'b1};
 	end endgenerate
 	assign cdr_rstb = (`MUT == 2) ? cs[0] : cs[1];
+
+	// wclk state reset (G9): asserted at once by rst_n_sup only, released
+	// through 2 wclk flops
+	wire w_go = (`MUT == 13) ? (rst_n_sup && gddr_rdy) : rst_n_sup;
+	reg [1:0] ws = 2'b00;
+	generate if (`MUT == 12) begin
+		always @(posedge wclk) ws <= w_go ? {ws[0], 1'b1} : 2'b00;
+	end else begin
+		always @(posedge wclk or negedge w_go)
+			if (!w_go) ws <= 2'b00;
+			else ws <= {ws[0], 1'b1};
+	end endgenerate
+	assign rst_n_w = (`MUT == 10) ? cdr_rstb : (`MUT == 11) ? ws[0] : ws[1];
 
 	// emulator: rstb only
 	assign rst_n_emu = (`MUT == 5) ? (rstb && gddr_rdy) : rstb;
